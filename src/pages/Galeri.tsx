@@ -1,11 +1,50 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, Heart, Eye, X } from 'lucide-react';
+import { Camera, Heart, Eye, X, LucideIcon, MessageCircle } from 'lucide-react'; // Import MessageCircle untuk WA
 import AOS from 'aos';
+import 'aos/dist/aos.css';
+
+// Firebase Imports
+import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
+import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
+import { getFirestore, collection, onSnapshot, Firestore, query } from 'firebase/firestore';
+
+// Definisi tipe untuk item Galeri (sesuai dengan yang Anda gunakan di komponen CRUD)
+export interface GaleriItem {
+  id?: string; // Firestore ID will be a string
+  title: string;
+  category: string;
+  date: string; // Format YYYY-MM-DD
+  image: string; // URL gambar
+  photographer: string;
+  likes?: number; // Opsional, jika Anda punya fitur likes
+  views?: number; // Opsional, jika Anda punya fitur views
+}
+
+// Tambahkan deklarasi global untuk config Firebase jika belum ada di file ini atau main entry point
+declare global {
+  var __firebase_config: string | undefined;
+  var __app_id: string | undefined;
+}
+
 
 const Galeri = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [selectedImage, setSelectedImage] = useState<GaleriItem | null>(null);
 
+  // States untuk data dinamis dari Firebase
+  const [photosData, setPhotosData] = useState<GaleriItem[]>([]);
+  const [loadingData, setLoadingData] = useState<boolean>(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  // Firebase states
+  const [db, setDb] = useState<Firestore | null>(null);
+  const [auth, setAuth] = useState<Auth | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
+
+  // Nomor WhatsApp Admin untuk upload foto
+  const ADMIN_WHATSAPP_NUMBER = '6281234567890'; // GANTI DENGAN NOMOR WHATSAPP ADMIN YANG SESUNGGUHNYA
+
+  // AOS Initialization
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -14,128 +53,152 @@ const Galeri = () => {
     });
   }, []);
 
-  const categories = [
-    { id: 'all', name: 'Semua', count: 24 },
-    { id: 'alam', name: 'Alam', count: 8 },
-    { id: 'budaya', name: 'Budaya', count: 6 },
-    { id: 'kegiatan', name: 'Kegiatan', count: 7 },
-    { id: 'fasilitas', name: 'Fasilitas', count: 3 },
+  // Firebase Initialization and Authentication
+  useEffect(() => {
+    let firebaseConfig: FirebaseOptions | null = null;
+    try {
+      if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
+        firebaseConfig = JSON.parse(__firebase_config);
+      } else {
+        console.warn("Firebase config (__firebase_config) is undefined or empty. Using dummy config.");
+        firebaseConfig = {
+          apiKey: "dummy-api-key", authDomain: "dummy.firebaseapp.com", projectId: "dummy-project",
+          storageBucket: "dummy.appspot.com", messagingSenderId: "dummy", appId: "dummy"
+        };
+        setDataError("Firebase config not found. Data might not load.");
+      }
+
+      let app: FirebaseApp;
+      if (!getApps().length) {
+        app = initializeApp(firebaseConfig);
+      } else {
+        app = getApps()[0];
+      }
+
+      const firestore: Firestore = getFirestore(app);
+      const firebaseAuth: Auth = getAuth(app);
+
+      setDb(firestore);
+      setAuth(firebaseAuth);
+
+      const unsubscribeAuth = firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
+        if (!user) { // Sign in anonymously to ensure read access if rules allow for unauthenticated users
+          try {
+            await signInAnonymously(firebaseAuth);
+          } catch (anonError: any) {
+            console.error("Error signing in anonymously:", anonError);
+            setDataError(`Authentication error: ${anonError.message}`);
+          }
+        }
+        setIsAuthReady(true);
+      });
+
+      return () => unsubscribeAuth();
+    } catch (e: any) {
+      console.error("Failed to initialize Firebase:", e);
+      setDataError(`Firebase initialization error: ${e.message}`);
+      setLoadingData(false);
+    }
+  }, []);
+
+  // Fetch dynamic Galeri data from Firestore
+  useEffect(() => {
+    if (!db || !isAuthReady) {
+      return;
+    }
+
+    setLoadingData(true);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const collectionPath = `/artifacts/${appId}/galeri`; // Jalur koleksi galeri
+
+    const unsubscribe = onSnapshot(query(collection(db, collectionPath)), (snapshot) => {
+      const data: GaleriItem[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as Omit<GaleriItem, 'id'>,
+        likes: (doc.data() as any).likes || 0, // Fallback likes to 0
+        views: (doc.data() as any).views || 0, // Fallback views to 0
+      }));
+      // Sortir berita berdasarkan tanggal terbaru
+      const sortedData = data.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      setPhotosData(sortedData);
+      setLoadingData(false);
+      setDataError(null);
+    }, (err) => {
+      console.error(`Error fetching galeri: ${err.message}`);
+      setDataError(`Failed to load gallery data: ${err.message}. Check Firestore rules for ${collectionPath}`);
+      setPhotosData([]); // Reset to empty array on error
+      setLoadingData(false);
+    });
+
+    // Cleanup function
+    return () => unsubscribe();
+  }, [db, isAuthReady]);
+
+  // Definisi kategori statis, tapi count akan dihitung dinamis
+  const staticCategories = [
+    { id: 'all', name: 'Semua' },
+    { id: 'alam', name: 'Alam' },
+    { id: 'budaya', name: 'Budaya' },
+    { id: 'kegiatan', name: 'Kegiatan' },
+    { id: 'fasilitas', name: 'Fasilitas' },
+    { id: 'lainnya', name: 'Lainnya' }, 
   ];
 
-  const photos = [
-    {
-      id: 1,
-      src: 'https://images.pexels.com/photos/1619317/pexels-photo-1619317.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Air Terjun Medalsari',
-      category: 'alam',
-      likes: 245,
-      views: 1200,
-      photographer: 'Desa Medalsari',
-    },
-    {
-      id: 2,
-      src: 'https://images.pexels.com/photos/1652229/pexels-photo-1652229.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Kebun Teh Panorama',
-      category: 'alam',
-      likes: 189,
-      views: 980,
-      photographer: 'Desa Medalsari',
-    },
-    {
-      id: 3,
-      src: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Rumah Adat Tradisional',
-      category: 'budaya',
-      likes: 156,
-      views: 750,
-      photographer: 'Tim Dokumentasi',
-    },
-    {
-      id: 4,
-      src: 'https://images.pexels.com/photos/1287145/pexels-photo-1287145.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Danau Cermin',
-      category: 'alam',
-      likes: 203,
-      views: 1100,
-      photographer: 'Desa Medalsari',
-    },
-    {
-      id: 5,
-      src: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Sunrise di Bukit Medalsari',
-      category: 'alam',
-      likes: 312,
-      views: 1500,
-      photographer: 'Fotografer Lokal',
-    },
-    {
-      id: 6,
-      src: 'https://images.pexels.com/photos/1578662/pexels-photo-1578662.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Hutan Pinus Asri',
-      category: 'alam',
-      likes: 178,
-      views: 890,
-      photographer: 'Desa Medalsari',
-    },
-    {
-      id: 7,
-      src: 'https://images.pexels.com/photos/1666021/pexels-photo-1666021.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Sawah Terasering',
-      category: 'alam',
-      likes: 234,
-      views: 1200,
-      photographer: 'Tim Dokumentasi',
-    },
-    {
-      id: 8,
-      src: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Tarian Tradisional',
-      category: 'budaya',
-      likes: 167,
-      views: 820,
-      photographer: 'Event Organizer',
-    },
-    {
-      id: 9,
-      src: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Kerajinan Anyaman',
-      category: 'budaya',
-      likes: 145,
-      views: 680,
-      photographer: 'UMKM Lokal',
-    },
-    {
-      id: 10,
-      src: 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Festival Panen',
-      category: 'kegiatan',
-      likes: 289,
-      views: 1400,
-      photographer: 'Desa Medalsari',
-    },
-    {
-      id: 11,
-      src: 'https://images.pexels.com/photos/1666021/pexels-photo-1666021.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Gotong Royong Masyarakat',
-      category: 'kegiatan',
-      likes: 198,
-      views: 950,
-      photographer: 'Warga Desa',
-    },
-    {
-      id: 12,
-      src: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=800',
-      title: 'Balai Desa',
-      category: 'fasilitas',
-      likes: 112,
-      views: 560,
-      photographer: 'Aparatur Desa',
-    },
-  ];
+  // Hitung jumlah foto untuk setiap kategori secara dinamis
+  const categoriesWithCount = staticCategories.map(cat => {
+    const count = cat.id === 'all' 
+      ? photosData.length 
+      : photosData.filter(photoItem => photoItem.category === cat.id).length;
+    return { ...cat, count };
+  });
 
   const filteredPhotos = selectedCategory === 'all' 
-    ? photos 
-    : photos.filter(photo => photo.category === selectedCategory);
+    ? photosData 
+    : photosData.filter(photo => photo.category === selectedCategory);
+
+  const handleUploadPhotoViaWA = () => {
+    const message = encodeURIComponent("Halo admin Desa Medalsari, saya ingin mengunggah foto untuk galeri desa. Bisakah saya mendapatkan instruksi?");
+    window.open(`https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${message}`, '_blank');
+  };
+
+
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-screen font-sans text-xl text-gray-700">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mr-3"></div>
+        Memuat data galeri...
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="text-center p-6 text-red-700 bg-red-50 rounded-lg border border-red-200 mx-auto max-w-lg font-sans mt-20">
+        <p className="font-semibold text-lg mb-2">Error Memuat Data Galeri!</p>
+        <p className="text-base">{dataError}</p>
+        <p className="text-sm mt-3">Pastikan koneksi internet Anda stabil dan aturan keamanan Firestore mengizinkan akses publik untuk koleksi galeri.</p>
+      </div>
+    );
+  }
+
+  if (photosData.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20">
+        <section className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center" data-aos="fade-up">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">Galeri Foto</h1>
+              <p className="text-xl text-purple-100">Potret kehidupan dan keindahan Desa Medalsari</p>
+            </div>
+          </div>
+        </section>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center text-gray-600 text-lg">
+          Tidak ada foto yang ditemukan.
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
@@ -154,7 +217,7 @@ const Galeri = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-center">
             <div className="flex flex-wrap gap-2 bg-white rounded-xl p-2 shadow-lg">
-              {categories.map((category) => (
+              {categoriesWithCount.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
@@ -186,9 +249,13 @@ const Galeri = () => {
               >
                 <div className="aspect-square overflow-hidden">
                   <img
-                    src={photo.src}
+                    src={photo.image || 'https://placehold.co/800x800/aabbcc/ffffff?text=No+Image'}
                     alt={photo.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).onerror = null;
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/800x800/aabbcc/ffffff?text=Error';
+                    }}
                   />
                 </div>
                 
@@ -209,17 +276,27 @@ const Galeri = () => {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-1">
                         <Heart className="w-4 h-4 text-red-500" />
-                        <span>{photo.likes}</span>
+                        <span>{photo.likes || 0}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Eye className="w-4 h-4 text-blue-500" />
-                        <span>{photo.views}</span>
+                        <span>{photo.views || 0}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
+            {filteredPhotos.length === 0 && selectedCategory !== 'all' && (
+                <div className="text-center text-gray-600 text-lg col-span-full">
+                    Tidak ada foto dalam kategori ini.
+                </div>
+            )}
+            {filteredPhotos.length === 0 && selectedCategory === 'all' && (
+                <div className="text-center text-gray-600 text-lg col-span-full">
+                    Tidak ada foto di galeri.
+                </div>
+            )}
           </div>
         </div>
       </section>
@@ -236,9 +313,13 @@ const Galeri = () => {
             </button>
             
             <img
-              src={selectedImage.src}
+              src={selectedImage.image || 'https://placehold.co/800x800/aabbcc/ffffff?text=No+Image'}
               alt={selectedImage.title}
               className="max-w-full max-h-full object-contain"
+              onError={(e) => {
+                  (e.target as HTMLImageElement).onerror = null;
+                  (e.target as HTMLImageElement).src = 'https://placehold.co/800x800/aabbcc/ffffff?text=Error';
+              }}
             />
             
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
@@ -247,11 +328,11 @@ const Galeri = () => {
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <Heart className="w-5 h-5 text-red-500" />
-                  <span>{selectedImage.likes} likes</span>
+                  <span>{selectedImage.likes || 0} likes</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Eye className="w-5 h-5 text-blue-500" />
-                  <span>{selectedImage.views} views</span>
+                  <span>{selectedImage.views || 0} views</span>
                 </div>
               </div>
             </div>
@@ -259,18 +340,23 @@ const Galeri = () => {
         </div>
       )}
 
-      {/* CTA Section */}
+      {/* CTA Section - Ubah menjadi WA Chat */}
       <section className="py-16 bg-gradient-to-r from-purple-500 to-pink-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div data-aos="fade-up">
-            <h2 className="text-3xl font-bold text-white mb-4">Bagikan Foto Anda</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">Punya Foto Menarik tentang Desa Medalsari?</h2>
             <p className="text-xl text-purple-100 mb-8">
-              Punya foto menarik tentang Desa Medalsari? Bagikan dengan kami!
+              Bagikan momen indah Anda! Hubungi admin desa via WhatsApp untuk mengunggah foto.
             </p>
-            <button className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors inline-flex items-center space-x-2">
-              <Camera className="w-5 h-5" />
-              <span>Upload Foto</span>
-            </button>
+            <a // Mengubah button menjadi <a> untuk link WhatsApp
+              href={`https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent('Halo admin, saya ingin mengupload foto untuk galeri desa.')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors inline-flex items-center space-x-2"
+            >
+              <MessageCircle className="w-5 h-5" /> {/* Ganti ikon Camera menjadi MessageCircle */}
+              <span>Chat Admin via WhatsApp</span>
+            </a>
           </div>
         </div>
       </section>

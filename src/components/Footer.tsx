@@ -25,7 +25,7 @@ const Footer = () => {
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <MapPin className="w-5 h-5 text-emerald-400" />
-                <span className="text-gray-400">Jl. Raya Medalsari No. 123, Kecamatan Medalsari</span>
+                <span className="text-gray-400">Kp Tegal simeut 41362, Medalsari, Kec. Pangkalan, Karawang, Jawa Barat 41362</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-5 h-5 text-emerald-400" />
@@ -42,11 +42,11 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Tautan Cepat</h3>
             <div className="space-y-2">
-              <a href="#" className="block text-gray-400 hover:text-emerald-400 transition-colors">Visi & Misi</a>
-              <a href="#" className="block text-gray-400 hover:text-emerald-400 transition-colors">Data Penduduk</a>
-              <a href="#" className="block text-gray-400 hover:text-emerald-400 transition-colors">Aparatur Desa</a>
-              <a href="#" className="block text-gray-400 hover:text-emerald-400 transition-colors">Wisata</a>
-              <a href="#" className="block text-gray-400 hover:text-emerald-400 transition-colors">UMKM</a>
+              <a href="/visi-misi" className="block text-gray-400 hover:text-emerald-400 transition-colors">Visi & Misi</a>
+              <a href="/data-penduduk" className="block text-gray-400 hover:text-emerald-400 transition-colors">Data Penduduk</a>
+              <a href="/aparatur" className="block text-gray-400 hover:text-emerald-400 transition-colors">Aparatur Desa</a>
+              <a href="/wisata" className="block text-gray-400 hover:text-emerald-400 transition-colors">Wisata</a>
+              <a href="/umkm" className="block text-gray-400 hover:text-emerald-400 transition-colors">UMKM</a>
             </div>
           </div>
 
@@ -68,7 +68,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; 2024 Desa Medalsari. Semua hak dilindungi undang-undang.</p>
+          <p>&copy;KKN 2025 Desa Medalsari. Semua hak dilindungi undang-undang.</p>
         </div>
       </div>
     </footer>

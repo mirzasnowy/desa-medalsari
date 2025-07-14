@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { MapPin, Phone, Mail, Clock, Send, MessageCircle } from 'lucide-react';
 import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 const Kontak = () => {
   useEffect(() => {
@@ -11,11 +12,29 @@ const Kontak = () => {
     });
   }, []);
 
+  // Koordinat yang Anda minta
+  const latitude = -6.524828;
+  const longitude = 107.174051;
+  const mapZoom = 15; // Level zoom peta, sesuaikan sesuai kebutuhan (15-17 biasanya bagus untuk tingkat jalan)
+
+  // URL embed OpenStreetMap
+  // Untuk membuat bounding box yang sederhana di sekitar titik, kita bisa menambahkan/mengurangi sedikit dari koordinat
+  const bboxMinLon = longitude - 0.005;
+  const bboxMinLat = latitude - 0.005;
+  const bboxMaxLon = longitude + 0.005;
+  const bboxMaxLat = latitude + 0.005;
+
+  const openStreetMapEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bboxMinLon}%2C${bboxMinLat}%2C${bboxMaxLon}%2C${bboxMaxLat}&layer=mapnik&marker=${latitude}%2C${longitude}`;
+  
+  // URL untuk membuka di Google Maps (untuk tombol "Buka di Google Maps")
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+
   const contacts = [
     {
       icon: MapPin,
       title: 'Alamat',
-      info: 'Jl. Raya Medalsari No. 123, Kecamatan Medalsari, Kabupaten Medalsari, Jawa Barat 40123',
+      info: 'Kp Tegal simeut 41362, Medalsari, Kec. Pangkalan, Karawang, Jawa Barat 41362',
       color: 'bg-blue-500',
     },
     {
@@ -180,14 +199,17 @@ const Kontak = () => {
             {/* Map */}
             <div data-aos="fade-up" data-aos-delay="200">
               <h2 className="text-3xl font-bold text-gray-800 mb-6">Lokasi Kantor Desa</h2>
-              <div className="bg-gray-200 rounded-lg h-96 mb-6 flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">
-                    Peta interaktif akan ditampilkan di sini<br />
-                    Koordinat: -6.2088, 106.8456
-                  </p>
-                </div>
+              {/* Ganti div placeholder ini dengan iframe peta interaktif OpenStreetMap */}
+              <div className="bg-gray-200 rounded-lg h-96 mb-6 overflow-hidden">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={openStreetMapEmbedUrl} // Menggunakan URL OpenStreetMap
+                ></iframe>
               </div>
               <div className="bg-gray-50 rounded-lg p-6">
                 <h3 className="font-semibold text-gray-800 mb-2">Petunjuk Arah</h3>
@@ -195,9 +217,14 @@ const Kontak = () => {
                   Dari pusat kota, ambil jalan raya menuju arah utara sekitar 15 km. 
                   Kantor desa berada di sebelah kanan jalan, tepat di samping masjid besar.
                 </p>
-                <button className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                <a
+                  href={googleMapsUrl} // Menggunakan URL Google Maps untuk membuka di tab baru
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-colors inline-block"
+                >
                   Buka di Google Maps
-                </button>
+                </a>
               </div>
             </div>
           </div>

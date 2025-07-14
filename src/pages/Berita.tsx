@@ -1,11 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, User, Eye, Tag, Search, Filter } from 'lucide-react';
 import AOS from 'aos';
+import 'aos/dist/aos.css';
+
+// Firebase Imports
+import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
+import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
+import { getFirestore, collection, onSnapshot, Firestore, query } from 'firebase/firestore';
+
+// Definisi tipe untuk item Berita (sesuai dengan yang Anda gunakan di komponen CRUD)
+export interface BeritaItem {
+  id?: string; // Firestore ID will be a string
+  title: string;
+  excerpt: string;
+  content: string;
+  image: string; // URL gambar
+  category: string;
+  author: string;
+  date: string; // Format YYYY-MM-DD
+  featured: boolean;
+  status: 'Published' | 'Draft';
+  views?: number; // Views bisa opsional jika tidak selalu ada atau dihitung backend
+}
+
+// Tambahkan deklarasi global untuk config Firebase jika belum ada di file ini atau main entry point
+declare global {
+  var __firebase_config: string | undefined;
+  var __app_id: string | undefined;
+}
+
 
 const Berita = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // States untuk data dinamis dari Firebase
+  const [beritaData, setBeritaData] = useState<BeritaItem[]>([]);
+  const [loadingData, setLoadingData] = useState<boolean>(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  // Firebase states
+  const [db, setDb] = useState<Firestore | null>(null);
+  const [auth, setAuth] = useState<Auth | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
+
+  // AOS Initialization
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -14,116 +53,182 @@ const Berita = () => {
     });
   }, []);
 
-  const categories = [
-    { id: 'all', name: 'Semua', count: 12 },
-    { id: 'pengumuman', name: 'Pengumuman', count: 4 },
-    { id: 'kegiatan', name: 'Kegiatan', count: 5 },
-    { id: 'pembangunan', name: 'Pembangunan', count: 2 },
-    { id: 'sosial', name: 'Sosial', count: 1 },
+  // Firebase Initialization and Authentication
+  useEffect(() => {
+    let firebaseConfig: FirebaseOptions | null = null;
+    try {
+      if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
+        firebaseConfig = JSON.parse(__firebase_config);
+      } else {
+        console.warn("Firebase config (__firebase_config) is undefined or empty. Using dummy config.");
+        firebaseConfig = {
+          apiKey: "dummy-api-key", authDomain: "dummy.firebaseapp.com", projectId: "dummy-project",
+          storageBucket: "dummy.appspot.com", messagingSenderId: "dummy", appId: "dummy"
+        };
+        setDataError("Firebase config not found. Data might not load.");
+      }
+
+      let app: FirebaseApp;
+      if (!getApps().length) {
+        app = initializeApp(firebaseConfig);
+      } else {
+        app = getApps()[0];
+      }
+
+      const firestore: Firestore = getFirestore(app);
+      const firebaseAuth: Auth = getAuth(app);
+
+      setDb(firestore);
+      setAuth(firebaseAuth);
+
+      const unsubscribeAuth = firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
+        if (!user) { // Sign in anonymously to ensure read access if rules allow for unauthenticated users
+          try {
+            await signInAnonymously(firebaseAuth);
+          } catch (anonError: any) {
+            console.error("Error signing in anonymously:", anonError);
+            setDataError(`Authentication error: ${anonError.message}`);
+          }
+        }
+        setIsAuthReady(true);
+      });
+
+      return () => unsubscribeAuth();
+    } catch (e: any) {
+      console.error("Failed to initialize Firebase:", e);
+      setDataError(`Firebase initialization error: ${e.message}`);
+      setLoadingData(false);
+    }
+  }, []);
+
+  // Fetch dynamic Berita data from Firestore
+  useEffect(() => {
+    if (!db || !isAuthReady) {
+      return;
+    }
+
+    setLoadingData(true);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const collectionPath = `/artifacts/${appId}/berita`; // Jalur koleksi berita
+
+    const unsubscribe = onSnapshot(query(collection(db, collectionPath)), (snapshot) => {
+      const data: BeritaItem[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data() as Omit<BeritaItem, 'id'>,
+        views: (doc.data() as any).views || 0, // Fallback views to 0 if not present
+      }));
+      // Sortir berita berdasarkan tanggal terbaru
+      const sortedData = data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setBeritaData(sortedData);
+      setLoadingData(false);
+      setDataError(null);
+    }, (err) => {
+      console.error(`Error fetching berita: ${err.message}`);
+      setDataError(`Failed to load news data: ${err.message}. Check Firestore rules for ${collectionPath}`);
+      setBeritaData([]); // Reset to empty array on error
+      setLoadingData(false);
+    });
+
+    // Cleanup function
+    return () => unsubscribe();
+  }, [db, isAuthReady]);
+
+
+  // Definisi kategori statis, tapi count akan dihitung dinamis
+  const staticCategories = [
+    { id: 'all', name: 'Semua' },
+    { id: 'pengumuman', name: 'Pengumuman' },
+    { id: 'kegiatan', name: 'Kegiatan' },
+    { id: 'pembangunan', name: 'Pembangunan' },
+    { id: 'sosial', name: 'Sosial' },
+    { id: 'lainnya', name: 'Lainnya' }, // Tambahkan 'lainnya' jika ada di data Anda
   ];
 
-  const news = [
-    {
-      id: 1,
-      title: 'Peluncuran Program Digitalisasi Desa Medalsari',
-      excerpt: 'Program digitalisasi desa dimulai dengan pelatihan aparatur desa dan pengembangan sistem informasi terintegrasi.',
-      content: 'Desa Medalsari meluncurkan program digitalisasi...',
-      image: 'https://images.pexels.com/photos/1181676/pexels-photo-1181676.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'pengumuman',
-      author: 'Admin Desa',
-      date: '2024-01-15',
-      views: 245,
-      featured: true,
-    },
-    {
-      id: 2,
-      title: 'Festival Panen Raya 2024',
-      excerpt: 'Festival panen raya akan diselenggarakan pada tanggal 20-22 Januari 2024 di lapangan desa.',
-      content: 'Festival panen raya merupakan acara tahunan...',
-      image: 'https://images.pexels.com/photos/1065084/pexels-photo-1065084.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'kegiatan',
-      author: 'Panitia Festival',
-      date: '2024-01-10',
-      views: 198,
-      featured: false,
-    },
-    {
-      id: 3,
-      title: 'Pembangunan Jalan Lingkar Desa Dimulai',
-      excerpt: 'Proyek pembangunan jalan lingkar desa dengan total panjang 5 km telah dimulai dan ditargetkan selesai dalam 6 bulan.',
-      content: 'Pembangunan jalan lingkar desa merupakan...',
-      image: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'pembangunan',
-      author: 'Kaur Pembangunan',
-      date: '2024-01-08',
-      views: 167,
-      featured: true,
-    },
-    {
-      id: 4,
-      title: 'Pelatihan UMKM Digital Marketing',
-      excerpt: 'Pelatihan digital marketing untuk pelaku UMKM desa akan dilaksanakan setiap hari Sabtu di bulan Januari.',
-      content: 'Pelatihan digital marketing bertujuan...',
-      image: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'kegiatan',
-      author: 'Dinas Koperasi',
-      date: '2024-01-05',
-      views: 134,
-      featured: false,
-    },
-    {
-      id: 5,
-      title: 'Bantuan Sosial untuk Keluarga Kurang Mampu',
-      excerpt: 'Pemerintah desa menyalurkan bantuan sosial berupa sembako dan uang tunai untuk 150 keluarga kurang mampu.',
-      content: 'Program bantuan sosial merupakan...',
-      image: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'sosial',
-      author: 'Kaur Kesejahteraan',
-      date: '2024-01-03',
-      views: 189,
-      featured: false,
-    },
-    {
-      id: 6,
-      title: 'Pembukaan Wisata Baru Air Terjun Medalsari',
-      excerpt: 'Destinasi wisata baru air terjun Medalsari resmi dibuka untuk umum dengan fasilitas yang lengkap.',
-      content: 'Air terjun Medalsari merupakan...',
-      image: 'https://images.pexels.com/photos/1619317/pexels-photo-1619317.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'pengumuman',
-      author: 'Pokdarwis',
-      date: '2024-01-01',
-      views: 298,
-      featured: true,
-    },
-  ];
+  // Hitung jumlah berita untuk setiap kategori secara dinamis
+  const categoriesWithCount = staticCategories.map(cat => {
+    const count = cat.id === 'all' 
+      ? beritaData.length 
+      : beritaData.filter(newsItem => newsItem.category === cat.id).length;
+    return { ...cat, count };
+  });
 
-  const filteredNews = news.filter(item => {
+
+  const filteredNews = beritaData.filter(item => {
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
+                            item.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  const featuredNews = news.filter(item => item.featured);
+  const featuredNews = beritaData.filter(item => item.featured);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      // Validasi tanggal agar tidak menampilkan 'Invalid Date'
+      if (isNaN(date.getTime())) {
+          return 'Tanggal Tidak Valid';
+      }
+      return date.toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return dateString; // Kembali ke string asli jika ada error format
+    }
   };
 
   const getCategoryColor = (category: string) => {
-    const colors = {
+    const colors: { [key: string]: string } = {
       pengumuman: 'bg-blue-100 text-blue-800',
       kegiatan: 'bg-green-100 text-green-800',
       pembangunan: 'bg-purple-100 text-purple-800',
       sosial: 'bg-orange-100 text-orange-800',
+      lainnya: 'bg-gray-100 text-gray-800', // Tambahkan warna untuk 'lainnya'
     };
-    return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[category] || 'bg-gray-100 text-gray-800'; // Fallback jika kategori tidak dikenal
   };
+
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-screen font-sans text-xl text-gray-700">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500 mr-3"></div>
+        Memuat data berita...
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="text-center p-6 text-red-700 bg-red-50 rounded-lg border border-red-200 mx-auto max-w-lg font-sans mt-20">
+        <p className="font-semibold text-lg mb-2">Error Memuat Data Berita!</p>
+        <p className="text-base">{dataError}</p>
+        <p className="text-sm mt-3">Pastikan koneksi internet Anda stabil dan aturan keamanan Firestore mengizinkan akses publik untuk koleksi berita.</p>
+      </div>
+    );
+  }
+
+  // Tampilkan pesan jika tidak ada berita setelah loading
+  if (beritaData.length === 0 && !loadingData && !dataError) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20">
+        <section className="bg-gradient-to-r from-blue-600 to-cyan-700 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center" data-aos="fade-up">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">Berita & Pengumuman</h1>
+              <p className="text-xl text-blue-100">Informasi terkini dari Desa Medalsari</p>
+            </div>
+          </div>
+        </section>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center text-gray-600 text-lg">
+          Tidak ada berita yang ditemukan.
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
@@ -155,7 +260,7 @@ const Berita = () => {
             
             {/* Categories */}
             <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
+              {categoriesWithCount.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
@@ -174,7 +279,7 @@ const Berita = () => {
       </section>
 
       {/* Featured News */}
-      {selectedCategory === 'all' && searchQuery === '' && (
+      {selectedCategory === 'all' && searchQuery === '' && featuredNews.length > 0 && ( // Tampilkan hanya jika ada featured news
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12" data-aos="fade-up">
@@ -192,13 +297,17 @@ const Berita = () => {
                 >
                   <div className="relative">
                     <img
-                      src={item.image}
+                      src={item.image || 'https://placehold.co/800x480/aabbcc/ffffff?text=No+Image'}
                       alt={item.title}
                       className="w-full h-48 object-cover"
+                      onError={(e) => {
+                          (e.target as HTMLImageElement).onerror = null;
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/800x480/aabbcc/ffffff?text=Error';
+                      }}
                     />
                     <div className="absolute top-4 left-4">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(item.category)}`}>
-                        {categories.find(c => c.id === item.category)?.name}
+                        {categoriesWithCount.find(c => c.id === item.category)?.name || item.category}
                       </span>
                     </div>
                   </div>
@@ -220,7 +329,7 @@ const Berita = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Eye className="w-4 h-4" />
-                        <span>{item.views}</span>
+                        <span>{item.views || 0}</span> {/* Tampilkan 0 jika views undefined */}
                       </div>
                     </div>
                     
@@ -240,7 +349,7 @@ const Berita = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12" data-aos="fade-up">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
-              {selectedCategory === 'all' ? 'Semua Berita' : `Berita ${categories.find(c => c.id === selectedCategory)?.name}`}
+              {selectedCategory === 'all' ? 'Semua Berita' : `Berita ${categoriesWithCount.find(c => c.id === selectedCategory)?.name || selectedCategory}`}
             </h2>
             <p className="text-xl text-gray-600">
               {filteredNews.length} berita ditemukan
@@ -258,15 +367,19 @@ const Berita = () => {
                 <div className="md:flex">
                   <div className="md:w-1/3">
                     <img
-                      src={item.image}
+                      src={item.image || 'https://placehold.co/800x480/aabbcc/ffffff?text=No+Image'}
                       alt={item.title}
                       className="w-full h-48 md:h-full object-cover"
+                      onError={(e) => {
+                          (e.target as HTMLImageElement).onerror = null;
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/800x480/aabbcc/ffffff?text=Error';
+                      }}
                     />
                   </div>
                   <div className="md:w-2/3 p-6">
                     <div className="flex items-center justify-between mb-2">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(item.category)}`}>
-                        {categories.find(c => c.id === item.category)?.name}
+                        {categoriesWithCount.find(c => c.id === item.category)?.name || item.category}
                       </span>
                       {item.featured && (
                         <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
@@ -291,7 +404,7 @@ const Berita = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Eye className="w-4 h-4" />
-                        <span>{item.views}</span>
+                        <span>{item.views || 0}</span> {/* Tampilkan 0 jika views undefined */}
                       </div>
                     </div>
                     
@@ -302,6 +415,16 @@ const Berita = () => {
                 </div>
               </div>
             ))}
+            {filteredNews.length === 0 && searchQuery !== '' && (
+                <div className="text-center text-gray-600 text-lg col-span-full">
+                    Tidak ada berita yang cocok dengan pencarian Anda.
+                </div>
+            )}
+            {filteredNews.length === 0 && selectedCategory !== 'all' && searchQuery === '' && (
+                <div className="text-center text-gray-600 text-lg col-span-full">
+                    Tidak ada berita dalam kategori ini.
+                </div>
+            )}
           </div>
         </div>
       </section>

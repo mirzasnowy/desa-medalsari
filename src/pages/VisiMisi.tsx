@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Target, CheckCircle, Lightbulb, Heart, Users, TreePine } from 'lucide-react';
+import { Target, CheckCircle, Lightbulb, Heart, Users, TreePine, Leaf,Handshake, GraduationCap, Building } from 'lucide-react';
 import AOS from 'aos';
 
 const VisiMisi = () => {
@@ -11,32 +11,32 @@ const VisiMisi = () => {
     });
   }, []);
 
-  const missions = [
-    {
-      icon: Users,
-      title: 'Pemberdayaan Masyarakat',
-      description: 'Mengembangkan potensi SDM melalui pelatihan dan pendampingan berkelanjutan',
-      color: 'bg-blue-500',
-    },
-    {
-      icon: TreePine,
-      title: 'Kelestarian Lingkungan',
-      description: 'Menjaga dan melestarikan lingkungan alam untuk generasi mendatang',
-      color: 'bg-green-500',
-    },
-    {
-      icon: Heart,
-      title: 'Kesejahteraan Sosial',
-      description: 'Meningkatkan kualitas hidup masyarakat melalui program-program sosial',
-      color: 'bg-red-500',
-    },
-    {
-      icon: Lightbulb,
-      title: 'Inovasi dan Teknologi',
-      description: 'Menerapkan teknologi modern untuk kemajuan desa',
-      color: 'bg-purple-500',
-    },
-  ];
+const missions = [
+  {
+    icon: Handshake, // Kebijakan yang berpihak kepada kepentingan masyarakat
+    title: 'Kebijakan Pro-Rakyat',
+    description: 'Menciptakan kebijakan pemerintah desa yang berpihak kepada kepentingan masyarakat.',
+    color: 'bg-blue-500', // Warna biru untuk kebijakan
+  },
+  {
+    icon: Leaf, // Pembangunan pertanian dan perekonomian (sektor unggulan)
+    title: 'Pengembangan Sektor Unggulan',
+    description: 'Mendukung segala upaya terhadap pembangunan di bidang pertanian dan perekonomian sebagai sektor unggulan Desa.',
+    color: 'bg-emerald-500', // Warna hijau untuk pertanian/ekonomi
+  },
+  {
+    icon: GraduationCap, // Kualitas pendidikan dan kesehatan
+    title: 'Peningkatan Pendidikan & Kesehatan',
+    description: 'Meningkatkan kualitas pendidikan dan kesehatan yang merata dan terjangkau bagi masyarakat.',
+    color: 'bg-orange-500', // Warna oranye untuk pendidikan/kesehatan
+  },
+  {
+    icon: Building, // Pembangunan sarana dasar
+    title: 'Pembangunan Infrastruktur Dasar',
+    description: 'Meningkatkan pembangunan sarana dasar yang mendukung terhadap kehidupan masyarakat.',
+    color: 'bg-red-500', // Warna merah untuk pembangunan/infrastruktur
+  },
+];
 
   const values = [
     { title: 'Gotong Royong', description: 'Semangat kebersamaan dalam membangun desa' },
@@ -92,8 +92,7 @@ const VisiMisi = () => {
             <h2 className="text-3xl font-bold text-gray-800 mb-6">Visi Desa Medalsari</h2>
             <div className="max-w-4xl mx-auto">
               <blockquote className="text-2xl md:text-3xl font-light text-gray-700 italic leading-relaxed">
-                "Mewujudkan Desa Medalsari sebagai desa yang maju, sejahtera, dan berkelanjutan 
-                dengan berbasis pada kearifan lokal, teknologi modern, dan semangat gotong royong"
+                "Membangun Masyarakat Desa Medalsari yang Adil dan Religius"
               </blockquote>
             </div>
           </div>
@@ -211,11 +210,8 @@ const VisiMisi = () => {
           <div data-aos="fade-up">
             <h2 className="text-3xl font-bold text-white mb-4">Mari Wujudkan Bersama</h2>
             <p className="text-xl text-indigo-100 mb-8">
-              Bergabunglah dengan kami dalam membangun Desa Medalsari yang lebih maju dan sejahtera
+               Desa Medalsari yang lebih maju dan sejahtera
             </p>
-            <button className="bg-white text-indigo-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors">
-              Bergabung Sekarang
-            </button>
           </div>
         </div>
       </section>
