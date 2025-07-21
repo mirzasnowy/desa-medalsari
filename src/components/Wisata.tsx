@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, Search, LucideIcon, X, Save } from 'lucide-react'; // Removed UploadCloud, Star, MapPin, Clock, Phone as they are not directly used here
+import { Plus, Edit, Trash2, Search, LucideIcon, X, Save, MapPin, LocateFixed, Star, Phone, ExternalLink } from 'lucide-react'; // Import MapPin, LocateFixed, ExternalLink
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
 import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
 import {
@@ -14,6 +14,24 @@ import {
   query,
 } from 'firebase/firestore';
 // Firebase Storage imports are removed as per requirement
+import { Link } from 'react-router-dom';
+// Import React-Leaflet Components
+import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css'; // Pastikan CSS Leaflet diimpor
+import L from 'leaflet'; // Import Leaflet library untuk custom marker
+
+// Custom marker icon (untuk React-Leaflet)
+const defaultIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+  shadowSize: [41, 41],
+});
+// Penting: Atasi masalah ikon default Leaflet di Webpack/Vite
+L.Marker.prototype.options.icon = defaultIcon;
+
 
 // Definisi tipe untuk item Wisata
 export interface WisataItem {
@@ -26,6 +44,9 @@ export interface WisataItem {
   hours: string; // e.g., "08:00 - 17:00"
   facilities: string[]; // Array of strings
   contact: string; // e.g., "+62 812 3456 7890"
+  latitude?: number; // Tambahkan properti untuk koordinat
+  longitude?: number;
+  address?: string; // Tambahkan properti untuk alamat
 }
 
 // Definisi tipe untuk props komponen Wisata
@@ -35,6 +56,28 @@ interface WisataProps {
   menuItems: { id: string; label: string; icon: LucideIcon }[];
 }
 
+// Komponen Helper untuk Leaflet map clicks
+interface MapClickEventHandlerProps {
+    onMapClick: (lat: number, lng: number) => void;
+    currentPosition?: [number, number];
+}
+const MapClickEventHandler: React.FC<MapClickEventHandlerProps> = ({ onMapClick, currentPosition }) => {
+    const map = useMapEvents({
+        click: (e) => {
+            onMapClick(e.latlng.lat, e.latlng.lng);
+        },
+    });
+
+    useEffect(() => {
+      if (currentPosition) {
+        map.setView(currentPosition, map.getZoom()); 
+      }
+    }, [currentPosition, map]);
+
+    return null;
+};
+
+
 // WisataModal Component - For Add/Edit Form
 interface WisataModalProps {
   showModal: boolean;
@@ -42,45 +85,41 @@ interface WisataModalProps {
   editingItem: WisataItem | null;
   handleSave: (formData: WisataItem, file: File | null) => Promise<void>;
   isSaving: boolean;
-  CLOUDINARY_CLOUD_NAME: string; // Pass Cloudinary config to modal
-  CLOUDINARY_UPLOAD_PRESET: string; // Pass Cloudinary config to modal
+  CLOUDINARY_CLOUD_NAME: string;
+  CLOUDINARY_UPLOAD_PRESET: string;
 }
 
 const WisataModal: React.FC<WisataModalProps> = ({ showModal, setShowModal, editingItem, handleSave, isSaving, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET }) => {
   const [formData, setFormData] = useState<WisataItem>(
     editingItem || {
-      name: '',
-      description: '',
-      image: 'https://placehold.co/150x100/aabbcc/ffffff?text=No+Image',
-      rating: 0,
-      price: '',
-      hours: '',
-      facilities: [],
-      contact: '',
+      name: '', description: '', image: 'https://placehold.co/150x100/aabbcc/ffffff?text=No+Image',
+      rating: 0, price: '', hours: '', facilities: [], contact: '',
+      latitude: undefined, longitude: undefined, address: '', // Properti geolokasi
     }
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(
+    (editingItem?.latitude && editingItem?.longitude) 
+    ? [editingItem.latitude, editingItem.longitude] 
+    : [-6.524828, 107.174051] // Default ke koordinat desa Anda
+  );
 
   useEffect(() => {
     if (editingItem) {
       setFormData(editingItem);
       setImagePreview(editingItem.image);
-      setSelectedFile(null); // Ensure no file is selected when in edit mode, unless re-uploaded
+      setSelectedFile(null);
+      setMapCenter((editingItem.latitude && editingItem.longitude) ? [editingItem.latitude, editingItem.longitude] : [-6.524828, 107.174051]);
     } else {
       const defaultImage = 'https://placehold.co/150x100/aabbcc/ffffff?text=No+Image';
       setFormData({
-        name: '',
-        description: '',
-        image: defaultImage,
-        rating: 0,
-        price: '',
-        hours: '',
-        facilities: [],
-        contact: '',
+        name: '', description: '', image: defaultImage, rating: 0, price: '',
+        hours: '', facilities: [], contact: '', latitude: undefined, longitude: undefined, address: '',
       });
       setImagePreview(defaultImage);
       setSelectedFile(null);
+      setMapCenter([-6.524828, 107.174051]); // Reset map center ke default
     }
   }, [editingItem, showModal]);
 
@@ -88,27 +127,55 @@ const WisataModal: React.FC<WisataModalProps> = ({ showModal, setShowModal, edit
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value,
+      [name]: type === 'number' ? parseFloat(value) || undefined : value, // Gunakan undefined untuk nilai kosong pada number
     }));
   };
 
-  const handleFacilitiesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const { value } = e.target;
-    // Convert comma-separated string to array of strings
-    setFormData(prev => ({
-      ...prev,
-      facilities: value.split(',').map(f => f.trim()).filter(f => f !== ''),
-    }));
-  };
+const handleFacilitiesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const { value } = e.target;
+  setFormData(prev => ({
+    ...prev,
+    facilities: value.split(',').map(f => f.trim()),
+  }));
+};
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      setImagePreview(URL.createObjectURL(file)); // Create preview from selected file
+      setImagePreview(URL.createObjectURL(file));
     } else {
       setSelectedFile(null);
-      setImagePreview(formData.image || 'https://placehold.co/150x100/aabbcc/ffffff?text=No+Image'); // Fallback to old image or placeholder
+      setImagePreview(formData.image || 'https://placehold.co/150x100/aabbcc/ffffff?text=No+Image');
+    }
+  };
+
+  // Handler untuk klik peta
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    setFormData(prev => ({ ...prev!, latitude: lat, longitude: lng }));
+    setMapCenter([lat, lng]);
+  }, []);
+
+  // Handler untuk mendapatkan lokasi saat ini dari browser
+  const handleGetLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData(prev => ({ 
+            ...prev!, 
+            latitude: position.coords.latitude, 
+            longitude: position.coords.longitude 
+          }));
+          setMapCenter([position.coords.latitude, position.coords.longitude]);
+        },
+        (error) => {
+          console.error("Error getting geolocation:", error);
+          alert("Gagal mendapatkan lokasi saat ini. Pastikan Anda mengizinkan akses lokasi di browser Anda.");
+        }
+      );
+    } else {
+      alert("Geolocation tidak didukung oleh browser Anda.");
     }
   };
 
@@ -133,161 +200,86 @@ const WisataModal: React.FC<WisataModalProps> = ({ showModal, setShowModal, edit
           {editingItem ? 'Edit Data Wisata' : 'Tambah Data Wisata Baru'}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Nama */}
+          {/* Bagian Wisata Details yang sudah ada */}
+          <div> <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nama Wisata</label> <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Masukkan Nama Tempat Wisata" required /> </div>
+          <div> <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label> <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Masukkan deskripsi singkat tempat wisata" required></textarea> </div>
+          <div> <label htmlFor="rating" className="block text-sm font-medium text-gray-700 mb-1">Rating (0.0 - 5.0)</label> <input type="number" id="rating" name="rating" value={formData.rating} onChange={handleChange} min="0" max="5" step="0.1" className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Masukkan rating" required /> </div>
+          <div> <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Harga Tiket</label> <input type="text" id="price" name="price" value={formData.price} onChange={handleChange} className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Contoh: Rp 15.000" required /> </div>
+          <div> <label htmlFor="hours" className="block text-sm font-medium text-gray-700 mb-1">Jam Operasional</label> <input type="text" id="hours" name="hours" value={formData.hours} onChange={handleChange} className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Contoh: 08:00 - 17:00" required /> </div>
+          <div> <label htmlFor="facilities" className="block text-sm font-medium text-gray-700 mb-1">Fasilitas (Pisahkan dengan koma)</label> <textarea id="facilities" name="facilities" value={formData.facilities.join(', ')} onChange={handleFacilitiesChange} rows={2} className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Contoh: Parkir, Toilet, Warung, Gazebo"></textarea> </div>
+          <div> <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-1">Kontak (Nomor Telepon/WhatsApp)</label> <input type="text" id="contact" name="contact" value={formData.contact} onChange={handleChange} className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Contoh: +62 812 3456 7890" required /> </div>
+          
+          {/* --- BAGIAN TAMBAHAN UNTUK GEOLOKASI --- */}
+          <h4 className="text-lg font-semibold mt-6 mb-3 text-gray-800 border-b pb-2">Informasi Lokasi (Geolokasi)</h4>
+          {/* Alamat Wisata */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nama Wisata</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-              placeholder="Masukkan Nama Tempat Wisata"
-              required
-            />
-          </div>
-          {/* Deskripsi */}
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Alamat Lengkap</label>
             <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={3}
+              id="address" name="address" value={formData.address || ''} onChange={handleChange} rows={2}
               className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-              placeholder="Masukkan deskripsi singkat tempat wisata"
-              required
+              placeholder="Masukkan alamat lengkap tempat wisata"
             ></textarea>
           </div>
-          {/* Rating */}
-          <div>
-            <label htmlFor="rating" className="block text-sm font-medium text-gray-700 mb-1">Rating (0.0 - 5.0)</label>
-            <input
-              type="number"
-              id="rating"
-              name="rating"
-              value={formData.rating}
-              onChange={handleChange}
-              min="0"
-              max="5"
-              step="0.1"
-              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-              required
-            />
+          {/* Latitude */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+              <input
+                type="number" id="latitude" name="latitude" value={formData.latitude ?? ''} onChange={handleChange} step="any"
+                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                placeholder="Contoh: -6.123456"
+              />
+            </div>
+            {/* Longitude */}
+            <div>
+              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+              <input
+                type="number" id="longitude" name="longitude" value={formData.longitude ?? ''} onChange={handleChange} step="any"
+                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
+                placeholder="Contoh: 106.123456"
+              />
+            </div>
           </div>
-          {/* Harga */}
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Harga Tiket</label>
-            <input
-              type="text"
-              id="price"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-              placeholder="Contoh: Rp 15.000"
-              required
-            />
+          {/* Tombol Get Current Location */}
+          <button
+            type="button"
+            onClick={handleGetLocation}
+            className="w-full flex items-center justify-center space-x-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium shadow-sm"
+          >
+            <LocateFixed className="w-5 h-5" />
+            <span>Dapatkan Lokasi Saat Ini</span>
+          </button>
+
+          {/* Peta Interaktif di Modal */}
+          <div className="w-full h-64 rounded-lg overflow-hidden border border-gray-300 shadow-sm">
+            <MapContainer 
+              center={mapCenter} 
+              zoom={14} 
+              scrollWheelZoom={true} 
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {formData.latitude && formData.longitude && (
+                <Marker position={[formData.latitude, formData.longitude]} icon={defaultIcon}>
+                  <Popup>Lokasi Wisata</Popup>
+                </Marker>
+              )}
+              <MapClickEventHandler onMapClick={handleMapClick} currentPosition={mapCenter}/>
+            </MapContainer>
           </div>
-          {/* Jam Operasional */}
-          <div>
-            <label htmlFor="hours" className="block text-sm font-medium text-gray-700 mb-1">Jam Operasional</label>
-            <input
-              type="text"
-              id="hours"
-              name="hours"
-              value={formData.hours}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-              placeholder="Contoh: 08:00 - 17:00"
-              required
-            />
-          </div>
-          {/* Fasilitas */}
-          <div>
-            <label htmlFor="facilities" className="block text-sm font-medium text-gray-700 mb-1">Fasilitas (Pisahkan dengan koma)</label>
-            <textarea
-              id="facilities"
-              name="facilities"
-              value={formData.facilities.join(', ')} // Convert array to comma-separated string for display
-              onChange={handleFacilitiesChange}
-              rows={2}
-              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-              placeholder="Contoh: Parkir, Toilet, Warung, Gazebo"
-            ></textarea>
-          </div>
-          {/* Kontak */}
-          <div>
-            <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-1">Kontak (Nomor Telepon/WhatsApp)</label>
-            <input
-              type="text"
-              id="contact"
-              name="contact"
-              value={formData.contact}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
-              placeholder="Contoh: +62 812 3456 7890"
-              required
-            />
-          </div>
+          {/* --- AKHIR BAGIAN TAMBAHAN GEOLOKASI --- */}
+
           {/* Foto File Input */}
-          <div>
-            <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">Pilih Gambar Wisata</label>
-            <input
-              type="file"
-              id="image"
-              name="image"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            {imagePreview && (
-              <div className="mt-4 flex items-center space-x-3">
-                <img
-                  src={imagePreview}
-                  alt="Pratinjau Gambar"
-                  className="w-32 h-24 object-cover border border-gray-200 shadow-sm rounded-md"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).onerror = null;
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/150x100/aabbcc/ffffff?text=Error';
-                  }}
-                />
-                <span className="text-sm text-gray-600">Pratinjau Gambar</span>
-              </div>
-            )}
-          </div>
+          <div> <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">Pilih Gambar Wisata</label> <input type="file" id="image" name="image" accept="image/*" onChange={handleFileChange} className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" /> {imagePreview && (<div className="mt-4 flex items-center space-x-3"> <img src={imagePreview} alt="Pratinjau Gambar" className="w-32 h-24 object-cover border border-gray-200 shadow-sm rounded-md" onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = 'https://placehold.co/150x100/aabbcc/ffffff?text=Error'; }} /> <span className="text-sm text-gray-600">Pratinjau Gambar</span> </div>)} </div>
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
-            <button
-              type="button"
-              onClick={() => setShowModal(false)}
-              className="px-5 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-              disabled={isSaving}
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center space-x-2 justify-center"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Menyimpan...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  <span>Simpan</span>
-                </>
-              )}
+            <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium" disabled={isSaving}> Batal </button>
+            <button type="submit" className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center space-x-2 justify-center" disabled={isSaving}>
+              {isSaving ? (<><svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> <span>Menyimpan...</span> </>) : (<><Save className="w-5 h-5" /> <span>Simpan</span></>)}
             </button>
           </div>
         </form>
@@ -310,31 +302,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ showModal, setSho
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 font-sans">
       <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg text-center relative">
-        <button
-          onClick={() => setShowModal(false)}
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 rounded-full p-1 transition-colors"
-          aria-label="Close modal"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <button onClick={() => setShowModal(false)} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 rounded-full p-1 transition-colors" aria-label="Close modal"> <X className="w-5 h-5" /> </button>
         <h3 className="text-lg font-semibold mb-4 text-gray-800">Konfirmasi</h3>
         <p className="text-gray-700 mb-6">{message}</p>
         <div className="flex justify-center space-x-4">
-          <button
-            onClick={() => setShowModal(false)}
-            className="px-5 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-          >
-            Batal
-          </button>
-          <button
-            onClick={() => {
-              onConfirm();
-              setShowModal(false);
-            }}
-            className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-md"
-          >
-            Hapus
-          </button>
+          <button onClick={() => setShowModal(false)} className="px-5 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"> Batal </button>
+          <button onClick={() => { onConfirm(); setShowModal(false); }} className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-md"> Hapus </button>
         </div>
       </div>
     </div>
@@ -399,13 +372,9 @@ const Wisata: React.FC<WisataProps> = ({ searchQuery, setSearchQuery, menuItems 
       // Get Firestore and Auth instances
       const firestore: Firestore = getFirestore(app);
       const firebaseAuth: Auth = getAuth(app);
-      // Removed Firebase Storage initialization
-      // const firebaseStorage: FirebaseStorage = getStorage(app); 
 
       setDb(firestore);
       setAuth(firebaseAuth);
-      // Removed Firebase Storage state setting
-      // setStorage(firebaseStorage); 
 
       // Listen for auth state changes
       const unsubscribeAuth = firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
@@ -452,13 +421,13 @@ const Wisata: React.FC<WisataProps> = ({ searchQuery, setSearchQuery, menuItems 
       console.log("Conditions not met for data fetching. Returning.");
       // If no error, set loading to false after a short delay if no data loaded
       if (!error && !loading) {
-        const fallbackTimeout = setTimeout(() => {
-          setLoading(false);
-          if (wisataData.length === 0) {
-            setError("Data wisata belum dimuat atau tidak ditemukan. Silakan tambahkan data baru.");
-          }
-        }, 100); // Short delay to allow auth state to settle
-        return () => clearTimeout(fallbackTimeout);
+          const fallbackTimeout = setTimeout(() => {
+              setLoading(false);
+              if (wisataData.length === 0) {
+                  setError("Data wisata belum dimuat atau tidak ditemukan. Silakan tambahkan data baru.");
+              }
+          }, 100); // Short delay to allow auth state to settle
+          return () => clearTimeout(fallbackTimeout);
       }
       return;
     }
@@ -474,7 +443,7 @@ const Wisata: React.FC<WisataProps> = ({ searchQuery, setSearchQuery, menuItems 
       console.log("Wisata loading timeout reached. Setting loading to false.");
       setLoading(false);
       if (wisataData.length === 0 && !error?.includes("Konfigurasi Firebase tidak ditemukan")) {
-        setError("Waktu pemuatan data habis. Mungkin tidak ada data atau ada masalah koneksi/izin.");
+          setError("Waktu pemuatan data habis. Mungkin tidak ada data atau ada masalah koneksi/izin.");
       }
     }, 5000); // 5 seconds timeout
 
@@ -492,7 +461,11 @@ const Wisata: React.FC<WisataProps> = ({ searchQuery, setSearchQuery, menuItems 
       clearTimeout(loadingTimeout); // Clear the loading timeout if data arrives
       const data: WisataItem[] = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data() as Omit<WisataItem, 'id'>
+        ...doc.data() as Omit<WisataItem, 'id'>,
+        facilities: (doc.data() as any).facilities || [], // Pastikan ada fallback untuk array
+        latitude: (doc.data() as any).latitude, // Ambil data geolokasi
+        longitude: (doc.data() as any).longitude,
+        address: (doc.data() as any).address || '',
       }));
       // Sort data alphabetically by name
       const sortedData = data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -620,7 +593,7 @@ const Wisata: React.FC<WisataProps> = ({ searchQuery, setSearchQuery, menuItems 
   }, [db, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET]); // userId removed from dependencies
 
   // Defines the table headers
-  const getTableHeaders = useCallback(() => ['Gambar', 'Nama', 'Deskripsi', 'Rating', 'Harga', 'Jam', 'Fasilitas', 'Kontak'], []);
+  const getTableHeaders = useCallback(() => ['Gambar', 'Nama', 'Deskripsi', 'Rating', 'Harga', 'Jam', 'Fasilitas', 'Kontak', 'Alamat/Lokasi'], []); // Tambahkan header baru
 
   // Renders a single table row
   const renderTableRow = useCallback((item: WisataItem) => (
@@ -643,12 +616,13 @@ const Wisata: React.FC<WisataProps> = ({ searchQuery, setSearchQuery, menuItems 
       <td className="px-4 py-3 text-sm text-gray-700">{item.hours}</td>
       <td className="px-4 py-3 text-sm text-gray-700">{item.facilities.join(', ')}</td>
       <td className="px-4 py-3 text-sm text-gray-700">{item.contact}</td>
+      <td className="px-4 py-3 text-sm text-gray-700">{item.address || 'N/A'}</td> {/* Tampilkan alamat */}
     </>
   ), []);
 
   // Filter data based on search query
   const filteredData = wisataData.filter(item => {
-    const searchFields = `${item.name} ${item.description} ${item.price} ${item.hours} ${item.facilities.join(' ')} ${item.contact}`.toLowerCase();
+    const searchFields = `${item.name} ${item.description} ${item.price} ${item.hours} ${item.facilities.join(' ')} ${item.contact} ${item.address || ''}`.toLowerCase(); // Tambahkan address ke pencarian
     return searchFields.includes(searchQuery.toLowerCase());
   });
 
@@ -662,7 +636,6 @@ const Wisata: React.FC<WisataProps> = ({ searchQuery, setSearchQuery, menuItems 
     );
   }
 
-  // Display error message
   if (error) {
     return (
       <div className="text-center p-6 text-red-700 bg-red-50 rounded-lg border border-red-200 mx-4 font-sans">

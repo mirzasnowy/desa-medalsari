@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react'; // Menambahkan useState
-import { ArrowRight, Users, Building, TreePine, Camera, Star, MapPin } from 'lucide-react'; // Menghapus Clock karena tidak digunakan
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Users, Building, TreePine, Camera, Star, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom'; // Keep Link for external page navigation
 import AOS from 'aos';
-import 'aos/dist/aos.css'; // Pastikan CSS AOS diimpor
-import bgImage from '../assets/bg3.jpg';
+import 'aos/dist/aos.css';
+
+import ChatbotFAQ from '../components/ChatbotFAQ'; // Pastikan path benar
+import bgImage from '../assets/bg3.jpg'; // Pastikan path relatifnya benar
 import pemdesLogo from '../assets/pemdes.png'; // Pastikan path relatifnya benar
 
 // Firebase Imports
@@ -19,13 +21,11 @@ interface StatistikPendudukData {
 }
 
 interface UMKMItem {
-    id?: string; // Hanya perlu ID untuk menghitung length
-    // Tidak perlu semua properti UMKM jika hanya untuk count
+    id?: string; 
 }
 
 interface WisataItem {
-    id?: string; // Hanya perlu ID untuk menghitung length
-    // Tidak perlu semua properti Wisata jika hanya untuk count
+    id?: string;
 }
 
 // Tambahkan deklarasi global untuk config Firebase jika belum ada di file ini atau main entry point
@@ -58,7 +58,7 @@ const Home = () => {
         });
     }, []);
 
-    // Firebase Initialization and Authentication (copied from AdminDashboard for consistency)
+    // Firebase Initialization and Authentication
     useEffect(() => {
         let firebaseConfig: FirebaseOptions | null = null;
         try {
@@ -87,8 +87,7 @@ const Home = () => {
             setAuth(firebaseAuth);
 
             const unsubscribeAuth = firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
-                // We still sign in anonymously to ensure read access if rules allow for unauthenticated users
-                if (!user) {
+                if (!user) { 
                     try {
                         await signInAnonymously(firebaseAuth);
                     } catch (anonError: any) {
@@ -117,7 +116,7 @@ const Home = () => {
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const unsubscribes: (() => void)[] = [];
         let fetchedCount = 0;
-        const totalFetches = 3; // Statistik Penduduk, UMKM, Wisata
+        const totalFetches = 3; 
 
         const checkLoadingComplete = () => {
             fetchedCount++;
@@ -143,7 +142,7 @@ const Home = () => {
         }, (err) => {
             console.error(`Error fetching statistikPenduduk: ${err.message}`);
             setDataError(`Failed to load population data: ${err.message}`);
-            setTotalPenduduk(null); // Reset to null on error
+            setTotalPenduduk(null); 
             setKepalaKeluarga(null);
             checkLoadingComplete();
         }));
@@ -151,24 +150,24 @@ const Home = () => {
         // 2. Ambil Total UMKM (Koleksi)
         const umkmCollectionPath = `/artifacts/${appId}/umkm`;
         unsubscribes.push(onSnapshot(query(collection(db, umkmCollectionPath)), (snapshot) => {
-            setTotalUMKM(snapshot.size); // snapshot.size gives the number of documents
+            setTotalUMKM(snapshot.size); 
             checkLoadingComplete();
         }, (err) => {
             console.error(`Error fetching umkm: ${err.message}`);
             setDataError(`Failed to load UMKM count: ${err.message}`);
-            setTotalUMKM(null); // Reset to null on error
+            setTotalUMKM(null); 
             checkLoadingComplete();
         }));
 
         // 3. Ambil Total Wisata (Koleksi)
         const wisataCollectionPath = `/artifacts/${appId}/wisata`;
         unsubscribes.push(onSnapshot(query(collection(db, wisataCollectionPath)), (snapshot) => {
-            setTotalWisata(snapshot.size); // snapshot.size gives the number of documents
+            setTotalWisata(snapshot.size);
             checkLoadingComplete();
         }, (err) => {
             console.error(`Error fetching wisata: ${err.message}`);
             setDataError(`Failed to load tourism count: ${err.message}`);
-            setTotalWisata(null); // Reset to null on error
+            setTotalWisata(null); 
             checkLoadingComplete();
         }));
 
@@ -207,16 +206,16 @@ const Home = () => {
     const quickAccess = [
         { title: 'Wisata Alam', icon: TreePine, path: '/wisata', color: 'from-green-500 to-emerald-600' },
         { title: 'UMKM Lokal', icon: Building, path: '/umkm', color: 'from-blue-500 to-cyan-600' },
-        { title: 'Kearifan Lokal', icon: Star, path: '/kearifan', color: 'from-purple-500 to-pink-600' }, // Path disesuaikan
+        { title: 'Kearifan Lokal', icon: Star, path: '/kearifanLokal', color: 'from-purple-500 to-pink-600' }, 
         { title: 'Galeri Foto', icon: Camera, path: '/galeri', color: 'from-orange-500 to-red-600' },
     ];
 
     // Buat array stats dinamis berdasarkan data yang diambil
     const dynamicStats = [
-        { icon: Users, label: 'Jumlah Penduduk', value: totalPenduduk !== null ? totalPenduduk.toLocaleString() : 'Loading...', color: 'bg-blue-500' },
-        { icon: Building, label: 'Kepala Keluarga', value: kepalaKeluarga !== null ? kepalaKeluarga.toLocaleString() : 'Loading...', color: 'bg-emerald-500' },
-        { icon: TreePine, label: 'Tempat Wisata', value: totalWisata !== null ? totalWisata.toLocaleString() : 'Loading...', color: 'bg-purple-500' },
-        { icon: Building, label: 'UMKM Aktif', value: totalUMKM !== null ? totalUMKM.toLocaleString() : 'Loading...', color: 'bg-orange-500' },
+        { icon: Users, label: 'Jumlah Penduduk', value: totalPenduduk !== null ? totalPenduduk.toLocaleString() : '0', color: 'bg-blue-500' },
+        { icon: Building, label: 'Kepala Keluarga', value: kepalaKeluarga !== null ? kepalaKeluarga.toLocaleString() : '0', color: 'bg-emerald-500' },
+        { icon: TreePine, label: 'Tempat Wisata', value: totalWisata !== null ? totalWisata.toLocaleString() : '0', color: 'bg-purple-500' },
+        { icon: Building, label: 'UMKM Aktif', value: totalUMKM !== null ? totalUMKM.toLocaleString() : '0', color: 'bg-orange-500' },
     ];
 
     if (loadingData) {
@@ -244,12 +243,12 @@ const Home = () => {
             {/* Hero Section */}
             <section className="relative h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100">
                 <div className="absolute inset-0 bg-black/20"></div>
-                  <div 
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                  style={{
-                      backgroundImage: `url(${bgImage})`,
-                  }}
-              ></div>
+                    <div 
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    style={{
+                        backgroundImage: `url(${bgImage})`,
+                    }}
+                ></div>
                 
                 <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4" data-aos="fade-up">
                     <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
@@ -262,10 +261,15 @@ const Home = () => {
                         Desa yang indah, maju, dan sejahtera. Mewujudkan kehidupan yang harmonis antara alam dan masyarakat.
                     </p>
                     <div className="space-x-4">
-                        <button className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-full font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 inline-flex items-center space-x-2">
+                        {/* Tombol "Jelajahi Keindahan Desa" -> Scroll ke Quick Access */}
+                        <a 
+                            href="#jelajahi-desa" // Target ID dari section Quick Access
+                            className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-full font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 inline-flex items-center space-x-2"
+                        >
                             <span>Jelajahi Keindahan Desa</span>
                             <ArrowRight className="w-5 h-5" />
-                        </button>
+                        </a>
+                        {/* Tombol "Hubungi Kami" -> Navigasi ke /kontak */}
                         <Link 
                             to="/kontak"
                             className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full font-semibold hover:bg-white/30 transition-all duration-300 inline-flex items-center space-x-2"
@@ -309,7 +313,7 @@ const Home = () => {
             </section>
 
             {/* Quick Access */}
-            <section className="py-20 bg-gray-50">
+            <section id="jelajahi-desa" className="py-20 bg-gray-50"> {/* Tambahkan ID ini */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12" data-aos="fade-up">
                         <h2 className="text-4xl font-bold text-gray-800 mb-4">Jelajahi Desa Medalsari</h2>
@@ -365,7 +369,7 @@ const Home = () => {
                                     <img 
                                         src={testimonial.image} 
                                         alt={testimonial.name}
-                                        className="w-12 h-12 rounded-full mr-4 object-cover" // Added object-cover
+                                        className="w-12 h-12 rounded-full mr-4 object-cover"
                                     />
                                     <div>
                                         <h4 className="font-semibold text-gray-800">{testimonial.name}</h4>
@@ -383,7 +387,7 @@ const Home = () => {
                     </div>
                 </div>
             </section>
-
+<ChatbotFAQ />
             {/* CTA Section */}
             <section className="py-20 bg-gradient-to-r from-emerald-500 to-teal-600">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -411,6 +415,8 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+            
+            {/* Chatbot FAQ Section */}
         </div>
     );
 };

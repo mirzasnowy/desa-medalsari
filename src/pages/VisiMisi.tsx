@@ -49,11 +49,6 @@ const missions = [
 
   const roadmap = [
     {
-      year: '2024',
-      title: 'Infrastruktur Dasar',
-      items: ['Perbaikan jalan desa', 'Pembangunan sistem drainase', 'Peningkatan fasilitas umum'],
-    },
-    {
       year: '2025',
       title: 'Pemberdayaan Ekonomi',
       items: ['Pengembangan UMKM', 'Pelatihan keterampilan', 'Pembangunan pasar desa'],
@@ -161,7 +156,7 @@ const missions = [
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12" data-aos="fade-up">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Roadmap Pembangunan</h2>
-            <p className="text-xl text-gray-600">Rencana strategis pembangunan desa 2024-2027</p>
+            <p className="text-xl text-gray-600">Rencana strategis pembangunan desa 2025-2027</p>
           </div>
           
           <div className="relative">

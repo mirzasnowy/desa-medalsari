@@ -132,7 +132,7 @@ const AdminLogin: React.FC = () => {
         </form>
 
         <div className="text-center mt-8 text-gray-600 text-sm">
-          © 2024 Desa Wisata Medalsari. All rights reserved.
+          © 2025 KKN Desa Medalsari. All rights reserved.
         </div>
       </div>
     </div>

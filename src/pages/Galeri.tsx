@@ -42,7 +42,7 @@ const Galeri = () => {
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
 
   // Nomor WhatsApp Admin untuk upload foto
-  const ADMIN_WHATSAPP_NUMBER = '6281234567890'; // GANTI DENGAN NOMOR WHATSAPP ADMIN YANG SESUNGGUHNYA
+  const ADMIN_WHATSAPP_NUMBER = '6285777177009'; // GANTI DENGAN NOMOR WHATSAPP ADMIN YANG SESUNGGUHNYA
 
   // AOS Initialization
   useEffect(() => {

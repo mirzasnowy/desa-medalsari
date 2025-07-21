@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, User, Eye, Tag, Search, Filter } from 'lucide-react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { Link } from 'react-router-dom'; // Pastikan Link diimpor
 
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
@@ -141,7 +142,7 @@ const Berita = () => {
     { id: 'kegiatan', name: 'Kegiatan' },
     { id: 'pembangunan', name: 'Pembangunan' },
     { id: 'sosial', name: 'Sosial' },
-    { id: 'lainnya', name: 'Lainnya' }, // Tambahkan 'lainnya' jika ada di data Anda
+    { id: 'lainnya', name: 'Lainnya' }, 
   ];
 
   // Hitung jumlah berita untuk setiap kategori secara dinamis
@@ -165,7 +166,6 @@ const Berita = () => {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      // Validasi tanggal agar tidak menampilkan 'Invalid Date'
       if (isNaN(date.getTime())) {
           return 'Tanggal Tidak Valid';
       }
@@ -176,7 +176,7 @@ const Berita = () => {
       });
     } catch (e) {
       console.error("Error formatting date:", e);
-      return dateString; // Kembali ke string asli jika ada error format
+      return dateString;
     }
   };
 
@@ -186,9 +186,9 @@ const Berita = () => {
       kegiatan: 'bg-green-100 text-green-800',
       pembangunan: 'bg-purple-100 text-purple-800',
       sosial: 'bg-orange-100 text-orange-800',
-      lainnya: 'bg-gray-100 text-gray-800', // Tambahkan warna untuk 'lainnya'
+      lainnya: 'bg-gray-100 text-gray-800',
     };
-    return colors[category] || 'bg-gray-100 text-gray-800'; // Fallback jika kategori tidak dikenal
+    return colors[category] || 'bg-gray-100 text-gray-800';
   };
 
   if (loadingData) {
@@ -210,7 +210,6 @@ const Berita = () => {
     );
   }
 
-  // Tampilkan pesan jika tidak ada berita setelah loading
   if (beritaData.length === 0 && !loadingData && !dataError) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20">
@@ -279,7 +278,7 @@ const Berita = () => {
       </section>
 
       {/* Featured News */}
-      {selectedCategory === 'all' && searchQuery === '' && featuredNews.length > 0 && ( // Tampilkan hanya jika ada featured news
+      {selectedCategory === 'all' && searchQuery === '' && featuredNews.length > 0 && (
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12" data-aos="fade-up">
@@ -333,9 +332,13 @@ const Berita = () => {
                       </div>
                     </div>
                     
-                    <button className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                    {/* Menggunakan Link untuk navigasi ke halaman detail berita */}
+                    <Link 
+                      to={`/berita/${item.id}`} // Pastikan rute ini ada di App.tsx
+                      className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors block text-center"
+                    >
                       Baca Selengkapnya
-                    </button>
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -408,9 +411,13 @@ const Berita = () => {
                       </div>
                     </div>
                     
-                    <button className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                    {/* Menggunakan Link untuk navigasi ke halaman detail berita */}
+                    <Link 
+                      to={`/berita/${item.id}`} // Pastikan rute ini ada di App.tsx
+                      className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors block text-center"
+                    >
                       Baca Selengkapnya
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>

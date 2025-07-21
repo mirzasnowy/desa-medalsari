@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "question": "Bagaimana cara mengurus surat keterangan domisili?",
+    "answer": "Untuk mengurus surat keterangan domisili, Anda perlu datang langsung ke kantor desa dengan membawa fotokopi KTP dan Kartu Keluarga (KK). Prosesnya biasanya memakan waktu 1-2 hari kerja setelah persyaratan lengkap.",
+    "keywords": ["surat", "domisili", "keterangan", "mengurus"]
+  },
+  {
+    "id": 2,
+    "question": "Apa saja syarat untuk mendaftar UMKM?",
+    "answer": "Untuk mendaftar UMKM, syarat umumnya adalah fotokopi KTP, fotokopi Kartu Keluarga (KK), pas foto terbaru, surat keterangan usaha dari RT/RW setempat, dan formulir pendaftaran yang bisa didapatkan di kantor desa atau diunduh dari website. Anda juga bisa chat admin via WhatsApp untuk panduan lebih lanjut.",
+    "keywords": ["umkm", "daftar", "syarat", "mendaftar"]
+  },
+  {
+    "id": 3,
+    "question": "Kapan jadwal pelayanan kantor desa?",
+    "answer": "Jadwal pelayanan kantor desa adalah:\n- Senin - Jumat: 08:00 - 16:00 WIB\n- Sabtu: 08:00 - 12:00 WIB\n- Minggu: Tutup",
+    "keywords": ["jadwal", "kantor", "pelayanan", "desa"]
+  },
+  {
+    "id": 4,
+    "question": "Bagaimana cara melaporkan kerusakan fasilitas umum?",
+    "answer": "Anda dapat melaporkan kerusakan fasilitas umum melalui beberapa cara: 1) Datang langsung ke kantor desa, 2) Menghubungi nomor telepon kantor desa, atau 3) Mengisi form pengaduan online di bagian kontak website desa.",
+    "keywords": ["lapor", "kerusakan", "fasilitas", "umum"]
+  },
+  {
+    "id": 5,
+    "question": "Apa saja tempat wisata di Desa Medalsari?",
+    "answer": "Desa Medalsari memiliki beberapa tempat wisata menarik, antara lain: Air Terjun Medalsari, Kebun Teh Panorama, Danau Cermin, Bukit Sunrise, dan Hutan Pinus Asri. Anda bisa melihat detail masing-masing tempat di halaman Wisata.",
+    "keywords": ["wisata", "tempat", "lokasi", "rekreasi"]
+  },
+  {
+    "id": 6,
+    "question": "Bagaimana cara mengajukan bantuan sosial?",
+    "answer": "Untuk mengajukan bantuan sosial, Anda bisa datang ke kantor desa pada jam pelayanan dengan membawa fotokopi KTP dan Kartu Keluarga (KK), serta surat pengantar dari RT/RW. Tim Kaur Kesejahteraan akan melakukan verifikasi data lebih lanjut.",
+    "keywords": ["bantuan", "sosial", "bansos", "mengajukan"]
+  }
+]

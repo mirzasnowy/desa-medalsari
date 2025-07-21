@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, Search, LucideIcon, X, UploadCloud, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, LucideIcon, X, Save } from 'lucide-react'; 
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
 import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
 import {
@@ -14,20 +14,20 @@ import {
   query,
 } from 'firebase/firestore';
 // Firebase Storage imports are removed as per requirement
-// import { getStorage, ref, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage';
 
 // Definisi tipe untuk item Aparatur Desa
 export interface AparaturDesaItem {
   id?: string; // Firestore ID will be a string
   nama: string;
   jabatan: string;
-  nip: string;
   foto: string; // URL foto
   description?: string; // Menambahkan kembali properti opsional ini
   experience?: string; // Menambahkan kembali properti opsional ini
   education?: string; // Menambahkan kembali properti opsional ini
-  phone?: string; // Menambahkan kembali properti opsional ini
-  email?: string; // Menambahkan kembali properti opsional ini
+  // NIP, phone, email DIHAPUS dari interface karena tidak akan digunakan/ditampilkan
+  // nip?: string; 
+  // phone?: string; 
+  // email?: string; 
 }
 
 // Definisi tipe untuk props komponen Aparatur Desa
@@ -53,13 +53,13 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
     editingItem || {
       nama: '',
       jabatan: '',
-      nip: '',
+      // nip: '', // DIHAPUS dari inisialisasi
       foto: 'https://placehold.co/100x100/aabbcc/ffffff?text=No+Image', // Default placeholder image
       description: '', 
       experience: '',
       education: '',
-      phone: '',
-      email: '',
+      // phone: '', // DIHAPUS dari inisialisasi
+      // email: '', // DIHAPUS dari inisialisasi
     }
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -75,13 +75,13 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
       setFormData({
         nama: '',
         jabatan: '',
-        nip: '',
+        // nip: '', // DIHAPUS dari inisialisasi reset
         foto: defaultFoto,
         description: '', 
         experience: '',
         education: '',
-        phone: '',
-        email: '',
+        // phone: '', // DIHAPUS dari inisialisasi reset
+        // email: '', // DIHAPUS dari inisialisasi reset
       });
       setImagePreview(defaultFoto);
       setSelectedFile(null);
@@ -116,7 +116,6 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 font-sans">
-      {/* PERBAIKAN: Tambahkan max-h-[90vh] dan overflow-y-auto ke div modal utama */}
       <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={() => setShowModal(false)}
@@ -126,7 +125,7 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
           <X className="w-5 h-5" />
         </button>
         <h3 className="text-xl font-semibold mb-5 text-gray-800 border-b pb-3">
-          {editingItem ? 'Edit Data Aparatur Desa' : 'Tambah Aparatur Desa Baru'}
+          {editingItem ? 'Edit Data Perangkat Desa' : 'Tambah Perangkat Desa Baru'}
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nama Input */}
@@ -157,8 +156,8 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
               required
             />
           </div>
-          {/* NIP Input */}
-          <div>
+          {/* NIP Input - DIHAPUS */}
+          {/* <div>
             <label htmlFor="nip" className="block text-sm font-medium text-gray-700 mb-1">NIP</label>
             <input
               type="text"
@@ -170,7 +169,7 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
               placeholder="Masukkan NIP"
               required
             />
-          </div>
+          </div> */}
           {/* Description Input */}
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Deskripsi/Profil Singkat</label>
@@ -210,8 +209,8 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
               placeholder="Misal: S1 Administrasi Publik"
             />
           </div>
-          {/* Phone Input */}
-          <div>
+          {/* Phone Input - DIHAPUS */}
+          {/* <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
             <input
               type="text"
@@ -222,9 +221,9 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
               className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               placeholder="Misal: +6281234567890"
             />
-          </div>
-          {/* Email Input */}
-          <div>
+          </div> */}
+          {/* Email Input - DIHAPUS */}
+          {/* <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
@@ -235,7 +234,7 @@ const AparaturDesaModal: React.FC<AparaturDesaModalProps> = ({ showModal, setSho
               className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2"
               placeholder="Misal: nama@email.com"
             />
-          </div>
+          </div> */}
           {/* Foto File Input */}
           <div>
             <label htmlFor="foto" className="block text-sm font-medium text-gray-700 mb-1">Pilih Foto</label>
@@ -476,8 +475,8 @@ const AparaturDesa: React.FC<AparaturDesaProps> = ({ searchQuery, setSearchQuery
         description: (doc.data() as any).description || '', 
         experience: (doc.data() as any).experience || '',
         education: (doc.data() as any).education || '',
-        phone: (doc.data() as any).phone || '',
-        email: (doc.data() as any).email || '',
+        phone: (doc.data() as any).phone || '', // Tetap ambil dari Firestore jika ada
+        email: (doc.data() as any).email || '', // Tetap ambil dari Firestore jika ada
       }));
       const sortedData = data.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
       setAparaturData(sortedData);
@@ -496,278 +495,279 @@ const AparaturDesa: React.FC<AparaturDesaProps> = ({ searchQuery, setSearchQuery
       unsubscribe();
       clearTimeout(loadingTimeout);
     };
-  }, [db, isAuthReady, error]); // userId dihilangkan dari dependensi
+  }, [db, isAuthReady, error]); 
 
-  // Handle adding new item
-  const handleAdd = useCallback(() => {
-    setEditingItem(null);
-    setShowAddEditModal(true);
-  }, []);
+  // Handle adding new item
+  const handleAdd = useCallback(() => {
+    setEditingItem(null);
+    setShowAddEditModal(true);
+  }, []);
 
-  // Handle editing an item
-  const handleEdit = useCallback((item: AparaturDesaItem) => {
-    setEditingItem(item);
-    setShowAddEditModal(true);
-  }, []);
+  // Handle editing an item
+  const handleEdit = useCallback((item: AparaturDesaItem) => {
+    setEditingItem(item);
+    setShowAddEditModal(true);
+  }, []);
 
-  // Handle initiating delete confirmation
-  const handleDeleteClick = useCallback((id: string) => {
-    setItemToDeleteId(id);
-    setShowConfirmModal(true);
-  }, []);
+  // Handle initiating delete confirmation
+  const handleDeleteClick = useCallback((id: string) => {
+    setItemToDeleteId(id);
+    setShowConfirmModal(true);
+  }, []);
 
-  // Handle confirming and executing delete
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!db || !itemToDeleteId) {
-      setError("Database not initialized or no item selected for deletion. Tidak dapat menghapus data.");
-      return;
-    }
+  // Handle confirming and executing delete
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!db || !itemToDeleteId) {
+      setError("Database not initialized or no item selected for deletion. Tidak dapat menghapus data.");
+      return;
+    }
 
-    try {
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const docRef = doc(db, `/artifacts/${appId}/aparaturDesa`, itemToDeleteId);
-      await deleteDoc(docRef);
-      console.log("Document successfully deleted!");
-      setItemToDeleteId(null);
-    } catch (e: any) {
-      console.error("Error removing document: ", e);
-      setError(`Failed to delete data: ${e.message}`);
-    }
-  }, [db, itemToDeleteId]);
+    try {
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      const docRef = doc(db, `/artifacts/${appId}/aparaturDesa`, itemToDeleteId);
+      await deleteDoc(docRef);
+      console.log("Document successfully deleted!");
+      setItemToDeleteId(null);
+    } catch (e: any) {
+      console.error("Error removing document: ", e);
+      setError(`Failed to delete data: ${e.message}`);
+    }
+  }, [db, itemToDeleteId]);
 
-  // Handle saving (add or edit) data to Firestore, now accepts a File object
-  const handleSave = useCallback(async (formData: AparaturDesaItem, file: File | null) => {
-    if (!db) { 
-      setError("Database tidak diinisialisasi. Tidak dapat menyimpan data.");
-      return;
-    }
+  // Handle saving (add or edit) data to Firestore, now accepts a File object
+  const handleSave = useCallback(async (formData: AparaturDesaItem, file: File | null) => {
+    if (!db) { 
+      setError("Database tidak diinisialisasi. Tidak dapat menyimpan data.");
+      return;
+    }
 
-    setIsSaving(true);
-    let imageUrl = formData.foto;
+    setIsSaving(true);
+    let imageUrl = formData.foto;
 
-    try {
-      if (file) {
-        // PERBAIKAN: Gunakan Cloudinary API untuk unggah gambar
-        const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-        uploadFormData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    try {
+      if (file) {
+        // PERBAIKAN: Gunakan Cloudinary API untuk unggah gambar
+        const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
+        uploadFormData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-        console.log("Uploading file to Cloudinary...");
-        const response = await fetch(cloudinaryUrl, {
-          method: 'POST',
-          body: uploadFormData,
-        });
+        console.log("Uploading file to Cloudinary...");
+        const response = await fetch(cloudinaryUrl, {
+          method: 'POST',
+          body: uploadFormData,
+        });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Cloudinary upload failed: ${errorData.error.message}`);
-        }
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Cloudinary upload failed: ${errorData.error.message}`);
+        }
 
-        const data = await response.json();
-        imageUrl = data.secure_url; // Dapatkan URL gambar dari Cloudinary
-        console.log("File uploaded to Cloudinary, URL:", imageUrl);
-      } else if (!formData.foto) {
-        imageUrl = 'https://placehold.co/100x100/aabbcc/ffffff?text=No+Image';
-      }
+        const data = await response.json();
+        imageUrl = data.secure_url; // Dapatkan URL gambar dari Cloudinary
+        console.log("File uploaded to Cloudinary, URL:", imageUrl);
+      } else if (!formData.foto) {
+        imageUrl = 'https://placehold.co/100x100/aabbcc/ffffff?text=No+Image';
+      }
 
-      const dataToSave = { ...formData, foto: imageUrl };
+      const dataToSave = { ...formData, foto: imageUrl };
 
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      if (dataToSave.id) {
-        const docRef = doc(db, `/artifacts/${appId}/aparaturDesa`, dataToSave.id);
-        await setDoc(docRef, dataToSave, { merge: true });
-        console.log("Document successfully updated!");
-      } else {
-        const collectionRef = collection(db, `/artifacts/${appId}/aparaturDesa`);
-        await addDoc(collectionRef, dataToSave);
-        console.log("Document successfully added!");
-      }
-      setShowAddEditModal(false);
-      setEditingItem(null);
-      setError(null);
-    } catch (e: any) {
-      console.error("Error saving document or uploading image: ", e);
-      setError(`Failed to save data: ${e.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [db, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET]);
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      if (dataToSave.id) {
+        const docRef = doc(db, `/artifacts/${appId}/aparaturDesa`, dataToSave.id);
+        await setDoc(docRef, dataToSave, { merge: true });
+        console.log("Document successfully updated!");
+      } else {
+        const collectionRef = collection(db, `/artifacts/${appId}/aparaturDesa`);
+        await addDoc(collectionRef, dataToSave);
+        console.log("Document successfully added!");
+      }
+      setShowAddEditModal(false);
+      setEditingItem(null);
+      setError(null);
+    } catch (e: any) {
+      console.error("Error saving document or uploading image: ", e);
+      setError(`Failed to save data: ${e.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [db, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET]);
 
-  // Defines the table headers
-  const getTableHeaders = useCallback(() => ['Foto', 'Nama', 'Jabatan', 'NIP'], []);
+  // Defines the table headers
+  const getTableHeaders = useCallback(() => ['Foto', 'Nama', 'Jabatan'], []); // NIP DIHAPUS
 
-  // Renders a single table row
-  const renderTableRow = useCallback((item: AparaturDesaItem) => (
-    <>
-      <td className="px-4 py-3">
-        <img
-          src={item.foto}
-          alt={item.nama}
-          className="w-12 h-12 rounded-full object-cover border border-gray-200"
-          onError={(e) => {
-            (e.target as HTMLImageElement).onerror = null;
-            (e.target as HTMLImageElement).src = 'https://placehold.co/48x48/aabbcc/ffffff?text=X';
-          }}
-        />
-      </td>
-      <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.nama}</td>
-      <td className="px-4 py-3 text-sm text-gray-700">{item.jabatan}</td>
-      <td className="px-4 py-3 text-sm text-gray-700">{item.nip}</td>
-    </>
-  ), []);
+  // Renders a single table row
+  const renderTableRow = useCallback((item: AparaturDesaItem) => (
+    <>
+      <td className="px-4 py-3">
+        <img
+          src={item.foto}
+          alt={item.nama}
+          className="w-12 h-12 rounded-full object-cover border border-gray-200"
+          onError={(e) => {
+            (e.target as HTMLImageElement).onerror = null;
+            (e.target as HTMLImageElement).src = 'https://placehold.co/48x48/aabbcc/ffffff?text=X';
+          }}
+        />
+      </td>
+      <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.nama}</td>
+      <td className="px-4 py-3 text-sm text-gray-700">{item.jabatan}</td>
+      {/* NIP DIHAPUS */}
+    </>
+  ), []);
 
-  // Filter data based on search query
-  const filteredData = aparaturData.filter(item => {
-    const searchFields = `${item.nama} ${item.jabatan} ${item.nip} ${item.description || ''} ${item.experience || ''} ${item.education || ''} ${item.phone || ''} ${item.email || ''}`.toLowerCase();
-    return searchFields.includes(searchQuery.toLowerCase());
-  });
+  // Filter data based on search query
+  const filteredData = aparaturData.filter(item => {
+    // Hapus nip, phone, email dari searchFields
+    const searchFields = `${item.nama} ${item.jabatan} ${item.description || ''} ${item.experience || ''} ${item.education || ''}`.toLowerCase();
+    return searchFields.includes(searchQuery.toLowerCase());
+  });
 
-  // Display loading indicator
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64 font-sans">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
-        <p className="ml-4 text-lg text-gray-600">Memuat data aparatur desa...</p>
-      </div>
-    );
-  }
+  // Display loading indicator
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64 font-sans">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+        <p className="ml-4 text-lg text-gray-600">Memuat data aparatur desa...</p>
+      </div>
+    );
+  }
 
-  // Display error message
-  if (error) {
-    return (
-      <div className="text-center p-6 text-red-700 bg-red-50 rounded-lg border border-red-200 mx-4 font-sans">
-        <p className="font-semibold text-lg mb-2">Terjadi Kesalahan! 😟</p>
-        <p className="text-base">{error}</p>
-        <p className="text-sm mt-3">Pastikan Firebase dikonfigurasi dengan benar dan aturan keamanan Firestore mengizinkan akses.</p>
-        {userId && ( // Menampilkan userId hanya untuk debugging, bisa dihapus di production
-          <p className="text-sm mt-2">
-            User ID Aktif: <code className="bg-gray-200 px-2 py-1 rounded text-gray-800 break-all">{userId}</code>
-          </p>
-        )}
-        <button
-          onClick={() => {
-            setError(null);
-            setLoading(true);
-          }}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Coba Lagi
-        </button>
-      </div>
-    );
-  }
+  // Display error message
+  if (error) {
+    return (
+      <div className="text-center p-6 text-red-700 bg-red-50 rounded-lg border border-red-200 mx-4 font-sans">
+        <p className="font-semibold text-lg mb-2">Terjadi Kesalahan! 😟</p>
+        <p className="text-base">{error}</p>
+        <p className="text-sm mt-3">Pastikan Firebase dikonfigurasi dengan benar dan aturan keamanan Firestore mengizinkan akses.</p>
+        {userId && ( // Menampilkan userId hanya untuk debugging, bisa dihapus di production
+          <p className="text-sm mt-2">
+            User ID Anda: <code className="bg-gray-200 px-2 py-1 rounded text-gray-800 break-all">{userId}</code>
+          </p>
+        )}
+        <button
+          onClick={() => {
+            setError(null);
+            setLoading(true);
+          }}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Coba Lagi
+        </button>
+      </div>
+    );
+  }
 
-  return (
-    <div className="space-y-8 p-4 sm:p-6 lg:p-8 font-sans">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            {menuItems.find(item => item.id === 'aparaturDesa')?.label || 'Data Aparatur Desa'}
-          </h2>
-          <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-full text-base font-semibold shadow-sm">
-            {filteredData.length} data
-          </span>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Cari data..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:ring-blue-500 w-full shadow-sm text-base"
-            />
-          </div>
-          <button
-            onClick={handleAdd}
-            className="w-full sm:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 font-semibold shadow-md"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Tambah Aparatur</span>
-          </button>
-        </div>
-      </div>
+  return (
+    <div className="space-y-8 p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+        <div className="flex items-center space-x-4">
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            {menuItems.find(item => item.id === 'aparaturDesa')?.label || 'Data Perangkat Desa'}
+          </h2>
+          <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-full text-base font-semibold shadow-sm">
+            {filteredData.length} data
+          </span>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Cari data..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:ring-blue-500 w-full shadow-sm text-base"
+            />
+          </div>
+          <button
+            onClick={handleAdd}
+            className="w-full sm:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 font-semibold shadow-md"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Tambah Perangkat</span>
+          </button>
+        </div>
+      </div>
 
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {getTableHeaders().map(header => (
-                  <th key={header} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    {header}
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {filteredData.length > 0 ? (
-                filteredData.map(item => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    {renderTableRow(item)}
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-50 transition-colors"
-                          aria-label={`Edit ${item.nama}`}
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => item.id && handleDeleteClick(item.id)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-50 transition-colors"
-                          aria-label={`Delete ${item.nama}`}
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={getTableHeaders().length + 1} className="text-center py-8 text-gray-500 text-lg">
-                    Tidak ada data aparatur desa yang ditemukan.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {getTableHeaders().map(header => (
+                  <th key={header} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    {header}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {filteredData.length > 0 ? (
+                filteredData.map(item => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                    {renderTableRow(item)}
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-50 transition-colors"
+                          aria-label={`Edit ${item.nama}`}
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => item.id && handleDeleteClick(item.id)}
+                          className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-50 transition-colors"
+                          aria-label={`Delete ${item.nama}`}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={getTableHeaders().length + 1} className="text-center py-8 text-gray-500 text-lg">
+                    Tidak ada data aparatur desa yang ditemukan.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {userId && ( // Menampilkan userId hanya untuk debugging
-        <div className="text-center p-2 bg-gray-100 text-gray-600 rounded-lg text-sm mt-4">
-          User ID Aktif: <code className="font-mono bg-gray-200 px-1 py-0.5 rounded break-all">{userId}</code>
-        </div>
-      )}
+      {userId && ( // Menampilkan userId hanya untuk debugging
+        <div className="text-center p-2 bg-gray-100 text-gray-600 rounded-lg text-sm mt-4">
+          User ID Aktif: <code className="font-mono bg-gray-200 px-1 py-0.5 rounded break-all">{userId}</code>
+        </div>
+      )}
 
-      {/* Modal for Add/Edit */}
-      <AparaturDesaModal
-        showModal={showAddEditModal}
-        setShowModal={setShowAddEditModal}
-        editingItem={editingItem}
-        handleSave={handleSave}
-        isSaving={isSaving}
-        CLOUDINARY_CLOUD_NAME={CLOUDINARY_CLOUD_NAME} 
-        CLOUDINARY_UPLOAD_PRESET={CLOUDINARY_UPLOAD_PRESET} 
-      />
+      {/* Modal for Add/Edit */}
+      <AparaturDesaModal
+        showModal={showAddEditModal}
+        setShowModal={setShowAddEditModal}
+        editingItem={editingItem}
+        handleSave={handleSave}
+        isSaving={isSaving}
+        CLOUDINARY_CLOUD_NAME={CLOUDINARY_CLOUD_NAME} 
+        CLOUDINARY_UPLOAD_PRESET={CLOUDINARY_UPLOAD_PRESET} 
+      />
 
-      {/* Confirmation Modal for Delete */}
-      <ConfirmationModal
-        showModal={showConfirmModal}
-        setShowModal={setShowConfirmModal}
-        onConfirm={handleDeleteConfirm}
-        message="Apakah Anda yakin ingin menghapus data aparatur desa ini secara permanen? Tindakan ini tidak dapat dibatalkan."
-      />
-    </div>
-  );
+      {/* Confirmation Modal for Delete */}
+      <ConfirmationModal
+        showModal={showConfirmModal}
+        setShowModal={setShowConfirmModal}
+        onConfirm={handleDeleteConfirm}
+        message="Apakah Anda yakin ingin menghapus data aparatur desa ini secara permanen? Tindakan ini tidak dapat dibatalkan."
+      />
+    </div>
+  );
 };
 
 export default AparaturDesa;

@@ -2,26 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { MapPin, Clock, Star, Phone, ExternalLink } from 'lucide-react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { Link } from 'react-router-dom'; // Pastikan Link diimpor
 
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
 import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, Firestore, query } from 'firebase/firestore';
 
-// Definisi tipe untuk item Wisata (sesuai dengan yang Anda gunakan di komponen CRUD)
+// Definisi tipe untuk item Wisata
 export interface WisataItem {
-  id?: string; // Firestore ID will be a string
+  id?: string;
   name: string;
   description: string;
-  image: string; // URL gambar
+  image: string;
   rating: number;
-  price: string; // e.g., "Rp 15.000"
-  hours: string; // e.g., "08:00 - 17:00"
-  facilities: string[]; // Array of strings
-  contact: string; // e.g., "+62 812 3456 7890"
+  price: string;
+  hours: string;
+  facilities: string[];
+  contact: string;
+  latitude?: number; // Tambahkan properti untuk koordinat
+  longitude?: number;
+  address?: string; // Tambahkan properti untuk alamat
 }
 
-// Tambahkan deklarasi global untuk config Firebase jika belum ada di file ini atau main entry point
+// Tambahkan deklarasi global untuk config Firebase
 declare global {
   var __firebase_config: string | undefined;
   var __app_id: string | undefined;
@@ -29,17 +33,14 @@ declare global {
 
 
 const Wisata = () => {
-  // State untuk data dinamis dari Firebase
   const [destinationsData, setDestinationsData] = useState<WisataItem[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [dataError, setDataError] = useState<string | null>(null);
 
-  // Firebase states
   const [db, setDb] = useState<Firestore | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
 
-  // AOS Initialization
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -48,7 +49,6 @@ const Wisata = () => {
     });
   }, []);
 
-  // Firebase Initialization and Authentication
   useEffect(() => {
     let firebaseConfig: FirebaseOptions | null = null;
     try {
@@ -96,7 +96,6 @@ const Wisata = () => {
     }
   }, []);
 
-  // Fetch dynamic Wisata data from Firestore
   useEffect(() => {
     if (!db || !isAuthReady) {
       return;
@@ -110,10 +109,11 @@ const Wisata = () => {
       const data: WisataItem[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data() as Omit<WisataItem, 'id'>,
-        // Pastikan properti array seperti facilities selalu array
         facilities: (doc.data() as any).facilities || [],
+        latitude: (doc.data() as any).latitude,
+        longitude: (doc.data() as any).longitude,
+        address: (doc.data() as any).address || '',
       }));
-      // Anda bisa menambahkan sorting jika perlu, misal berdasarkan rating atau nama
       const sortedData = data.sort((a, b) => b.rating - a.rating); // Sort by rating descending
       setDestinationsData(sortedData);
       setLoadingData(false);
@@ -121,11 +121,10 @@ const Wisata = () => {
     }, (err) => {
       console.error(`Error fetching wisata: ${err.message}`);
       setDataError(`Failed to load tourism data: ${err.message}. Check Firestore rules for ${collectionPath}`);
-      setDestinationsData([]); // Reset to empty array on error
+      setDestinationsData([]);
       setLoadingData(false);
     });
 
-    // Cleanup function
     return () => unsubscribe();
   }, [db, isAuthReady]);
 
@@ -219,6 +218,12 @@ const Wisata = () => {
                       <MapPin className="w-4 h-4 text-emerald-500" />
                       <span>Tiket: {destination.price}</span>
                     </div>
+                    {destination.address && ( // Tampilkan alamat jika ada
+                       <div className="flex items-center space-x-2 text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 text-emerald-500" />
+                          <span>Alamat: {destination.address}</span>
+                       </div>
+                    )}
                   </div>
                   
                   <div className="mb-4">
@@ -239,18 +244,21 @@ const Wisata = () => {
                   <div className="flex space-x-2">
                     <a 
                       href={`https://wa.me/${destination.contact.replace(/\D/g, '')}`}
-                      target="_blank" // Tambahkan ini agar link terbuka di tab baru
-                      rel="noopener noreferrer" // Praktik keamanan yang baik
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex-1 bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-2"
                     >
                       <Phone className="w-4 h-4" />
                       <span>Hubungi</span>
                     </a>
-                    {/* Tombol Detail sementara tidak memiliki jalur routing spesifik */}
-                    <button className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2">
+                    {/* Menggunakan Link untuk navigasi ke halaman detail */}
+                    <Link 
+                      to={`/wisata/${destination.id}`} // Link ke halaman detail Wisata
+                      className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
+                    >
                       <ExternalLink className="w-4 h-4" />
                       <span>Detail</span>
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -269,7 +277,7 @@ const Wisata = () => {
             </p>
             <div className="space-x-4">
               <a 
-                href="https://wa.me/6281234567890" // Ganti dengan nomor kontak spesifik jika ada
+                href="https://wa.me/6285777177009" // Ganti dengan nomor kontak spesifik jika ada
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white text-emerald-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors inline-flex items-center space-x-2"

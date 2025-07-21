@@ -121,7 +121,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ dashboardData }) 
         <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Aparatur Desa</p>
+              <p className="text-sm text-gray-600">Perangkat Desa</p>
               <p className="text-3xl font-bold text-green-600">{dashboardData.aparaturDesa.length}</p>
             </div>
             <User className="w-12 h-12 text-green-500" />

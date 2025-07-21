@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Mail, MapPin, Award } from 'lucide-react';
-import AOS from 'aos';
-import 'aos/dist/aos.css';
+import { MapPin, Award, Calendar } from 'lucide-react';
 
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
@@ -30,8 +28,7 @@ declare global {
   var __app_id: string | undefined;
 }
 
-
-const Aparatur = () => {
+const PerangkatDesa = () => {
   const [officialsData, setOfficialsData] = useState<AparaturDesaItem[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -39,15 +36,6 @@ const Aparatur = () => {
   const [db, setDb] = useState<Firestore | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
-
-  // AOS Initialization
-  useEffect(() => {
-    AOS.init({
-      duration: 1000,
-      easing: 'ease-in-out',
-      once: true,
-    });
-  }, []);
 
   // Firebase Initialization and Authentication
   useEffect(() => {
@@ -147,14 +135,12 @@ const Aparatur = () => {
   const kaurStaff = officialsData.filter(o => o.jabatan.startsWith('Kaur '));
   const kepalaDusun = officialsData.filter(o => o.jabatan.startsWith('Kepala Dusun '));
 
-
   // Fungsi untuk merender detail kartu pejabat kecil di bagan
   const renderChartOfficialCard = (official: AparaturDesaItem, bgColor: string, aosDelay: number) => (
     <div 
       key={official.id} 
-      className={`relative ${bgColor} text-white px-3 py-2 rounded-lg font-semibold text-sm shadow-md min-w-[120px] max-w-[150px] flex flex-col items-center justify-center text-center group`}
-      data-aos="fade-up" data-aos-delay={aosDelay}
-      style={{ minHeight: '60px' }} // Atur tinggi minimum agar seragam
+      className={`relative ${bgColor} text-white px-3 py-2 rounded-lg font-semibold text-sm shadow-md min-w-[120px] max-w-[150px] flex flex-col items-center justify-center text-center group transition-all duration-300 hover:scale-105`}
+      style={{ minHeight: '60px' }}
     >
       <img
         src={official.foto || 'https://placehold.co/100x100/aabbcc/ffffff?text=X'}
@@ -167,66 +153,78 @@ const Aparatur = () => {
     </div>
   );
 
-  // Fungsi untuk merender detail kartu pejabat besar (untuk Officials Grid)
+  // Fungsi untuk merender detail kartu pejabat besar (untuk Officials Grid) - UPDATED VERSION
   const renderOfficialCard = (official: AparaturDesaItem, aosDelay: number) => (
     <div
       key={official.id}
-      className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
-      data-aos="fade-up"
-      data-aos-delay={aosDelay}
+      className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-3 border border-gray-100 h-full flex flex-col"
     >
-      <div className="p-6">
-        <div className="relative mb-6">
+      {/* Header dengan gradient */}
+      <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -mr-10 -mt-10"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white opacity-10 rounded-full -ml-8 -mb-8"></div>
+        
+        <div className="relative text-center">
           <img
             src={official.foto || 'https://placehold.co/100x100/aabbcc/ffffff?text=No+Image'}
             alt={official.nama}
-            className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-gray-200"
+            className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-white shadow-lg mb-4"
             onError={(e) => {
                 (e.target as HTMLImageElement).onerror = null;
                 (e.target as HTMLImageElement).src = 'https://placehold.co/100x100/aabbcc/ffffff?text=Error';
             }}
           />
-          <div className="absolute bottom-0 right-1/2 transform translate-x-1/2 translate-y-1/2 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-            {official.jabatan}
+          <h3 className="text-xl font-bold mb-1">{official.nama}</h3>
+          <div className="bg-white bg-opacity-20 rounded-full px-4 py-1 inline-block">
+            <span className="text-sm font-medium">{official.jabatan}</span>
           </div>
         </div>
-        <div className="text-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800 mb-2">{official.nama}</h3>
-          {official.description && <p className="text-gray-600 mb-4">{official.description}</p>}
+      </div>
+      
+      {/* Content */}
+      <div className="p-6 flex-1 flex flex-col">
+        {/* Description */}
+        <div className="mb-4 flex-1">
+          {official.description ? (
+            <p className="text-gray-600 text-sm leading-relaxed bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+              {official.description}
+            </p>
+          ) : (
+            <div className="bg-gray-50 p-3 rounded-lg border-l-4 border-gray-300">
+              <p className="text-gray-400 text-sm italic">Deskripsi tidak tersedia</p>
+            </div>
+          )}
         </div>
+        
+        {/* Info Grid */}
         <div className="space-y-3 mb-6">
-          {official.experience && (
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Award className="w-4 h-4 text-blue-500" />
-              <span>Pengalaman: {official.experience}</span>
+          <div className="flex items-start space-x-3 p-3 bg-emerald-50 rounded-lg min-h-[60px]">
+            <Award className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-gray-700 block">Pengalaman</span>
+              <span className="text-sm text-gray-600">
+                {official.experience || 'Informasi pengalaman tidak tersedia'}
+              </span>
             </div>
-          )}
-          {official.education && (
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <MapPin className="w-4 h-4 text-emerald-500" />
-              <span>{official.education}</span>
+          </div>
+          
+          <div className="flex items-start space-x-3 p-3 bg-purple-50 rounded-lg min-h-[60px]">
+            <MapPin className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-gray-700 block">Pendidikan</span>
+              <span className="text-sm text-gray-600">
+                {official.education || 'Informasi pendidikan tidak tersedia'}
+              </span>
             </div>
-          )}
+          </div>
         </div>
-        <div className="space-y-2">
-          {official.phone && (
-            <a
-              href={`tel:${official.phone}`}
-              className="w-full flex items-center justify-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              <Phone className="w-4 h-4" />
-              <span>Telepon</span>
-            </a>
-          )}
-          {official.email && (
-            <a
-              href={`mailto:${official.email}`}
-              className="w-full flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <Mail className="w-4 h-4" />
-              <span>Email</span>
-            </a>
-          )}
+
+        {/* Decorative Bottom Element */}
+        <div className="pt-4 border-t border-gray-100 mt-auto">
+          <div className="flex items-center justify-center space-x-2 text-gray-400">
+            <Calendar className="w-4 h-4" />
+            <span className="text-xs">Periode 2021-2029</span>
+          </div>
         </div>
       </div>
     </div>
@@ -256,8 +254,8 @@ const Aparatur = () => {
       <div className="min-h-screen bg-gray-50 pt-20">
         <section className="bg-gradient-to-r from-slate-600 to-gray-700 text-white py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center" data-aos="fade-up">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">Aparatur Desa</h1>
+            <div className="text-center">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">Perangkat Desa</h1>
               <p className="text-xl text-slate-200">Struktur pemerintahan Desa Medalsari</p>
             </div>
           </div>
@@ -274,8 +272,8 @@ const Aparatur = () => {
       {/* Header */}
       <section className="bg-gradient-to-r from-slate-600 to-gray-700 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center" data-aos="fade-up">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Aparatur Desa</h1>
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Perangkat Desa</h1>
             <p className="text-xl text-slate-200">Struktur pemerintahan Desa Medalsari</p>
           </div>
         </div>
@@ -284,7 +282,7 @@ const Aparatur = () => {
       {/* Officials Grid (Individual Cards) */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center" data-aos="fade-up">Daftar Pejabat</h2>
+          <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Daftar Pejabat</h2>
           <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-8">
             {officialsData.map((official, index) => renderOfficialCard(official, index * 100))}
           </div>
@@ -294,14 +292,14 @@ const Aparatur = () => {
       {/* Organizational Chart - Sesuai dengan gambar */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12" data-aos="fade-up">
+          <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Struktur Organisasi</h2>
             <p className="text-xl text-gray-600">Susunan Organisasi Pemerintah Desa Medalsari</p>
             <p className="text-lg text-gray-500">Kecamatan Pangkalan Kabupaten Karawang</p>
             <p className="text-lg text-gray-500 font-semibold">Periode Tahun 2021 - 2029</p>
           </div>
           
-          <div className="relative max-w-6xl mx-auto py-8"> {/* Container utama bagan */}
+          <div className="relative max-w-6xl mx-auto py-8">
             {/* BACKGROUND GARIS ABU-ABU (BOARD) */}
             <div className="absolute inset-0 bg-gray-200 opacity-50 rounded-lg z-0"></div>
             <div className="absolute inset-0 border-2 border-gray-300 rounded-lg z-0"></div>
@@ -311,7 +309,7 @@ const Aparatur = () => {
 
               {/* Level 1: Kepala Desa */}
               {kepalaDesa && (
-                <div className="flex flex-col items-center mb-8" data-aos="fade-up" data-aos-delay="0">
+                <div className="flex flex-col items-center mb-8">
                   {renderChartOfficialCard(kepalaDesa, 'bg-blue-600', 0)}
                   {/* Garis vertikal dari Kepala Desa */}
                   <div className="w-1 h-12 bg-gray-400"></div>
@@ -321,24 +319,24 @@ const Aparatur = () => {
               {/* Percabangan Utama: Kasi, Sekretaris, Kepala Dusun */}
               <div className="flex justify-center w-full relative mb-12">
                 {/* Garis horizontal percabangan */}
-                <div className="absolute h-1 bg-gray-400 top-0 w-full" style={{ maxWidth: '70%' }}></div> {/* Atur max-width untuk rentang garis */}
+                <div className="absolute h-1 bg-gray-400 top-0 w-full" style={{ maxWidth: '70%' }}></div>
                 
                 {/* Garis vertikal dari percabangan ke masing-masing cabang */}
                 {/* Kasi Branch Line */}
-                <div className="absolute w-1 h-8 bg-gray-400 top-0 left-[calc(15%-4px)] translate-x-1/2"></div> {/* Posisi ke Kasi */}
+                <div className="absolute w-1 h-8 bg-gray-400 top-0 left-[calc(15%-4px)] translate-x-1/2"></div>
                 {/* Sekretaris Branch Line */}
-                <div className="absolute w-1 h-8 bg-gray-400 top-0 left-1/2 transform -translate-x-1/2"></div> {/* Posisi ke Sekdes */}
+                <div className="absolute w-1 h-8 bg-gray-400 top-0 left-1/2 transform -translate-x-1/2"></div>
                 {/* Kepala Dusun Branch Line */}
-                <div className="absolute w-1 h-8 bg-gray-400 top-0 right-[calc(15%-4px)] -translate-x-1/2"></div> {/* Posisi ke Kadus */}
+                <div className="absolute w-1 h-8 bg-gray-400 top-0 right-[calc(15%-4px)] -translate-x-1/2"></div>
                 
-                <div className="flex w-full justify-around items-start pt-8"> {/* Kontainer untuk 3 cabang */}
+                <div className="flex w-full justify-around items-start pt-8">
                   {/* Cabang Kasi */}
                   {kasiStaff.length > 0 && (
-                    <div className="flex flex-col items-center mx-4 min-w-[200px]" data-aos="fade-up" data-aos-delay="100">
+                    <div className="flex flex-col items-center mx-4 min-w-[200px]">
                       {kasiStaff.map((official, idx) => (
                         <React.Fragment key={official.id}>
                           {renderChartOfficialCard(official, 'bg-teal-600', 150 + idx * 50)}
-                          {idx < kasiStaff.length - 1 && <div className="w-1 h-4 bg-gray-400"></div>} {/* Garis vertikal antar Kasi */}
+                          {idx < kasiStaff.length - 1 && <div className="w-1 h-4 bg-gray-400"></div>}
                         </React.Fragment>
                       ))}
                     </div>
@@ -346,11 +344,11 @@ const Aparatur = () => {
 
                   {/* Cabang Sekretaris & Kaur */}
                   {(sekretarisDesa || kaurStaff.length > 0) && (
-                    <div className="flex flex-col items-center mx-4 min-w-[200px]" data-aos="fade-up" data-aos-delay="200">
+                    <div className="flex flex-col items-center mx-4 min-w-[200px]">
                       {sekretarisDesa && (
                         <div className="flex flex-col items-center">
                           {renderChartOfficialCard(sekretarisDesa, 'bg-emerald-600', 250)}
-                          {kaurStaff.length > 0 && <div className="w-1 h-12 bg-gray-400"></div>} {/* Garis vertikal dari Sekdes ke Kaur */}
+                          {kaurStaff.length > 0 && <div className="w-1 h-12 bg-gray-400"></div>}
                         </div>
                       )}
                       
@@ -359,7 +357,7 @@ const Aparatur = () => {
                           {kaurStaff.map((official, idx) => (
                             <React.Fragment key={official.id}>
                               {renderChartOfficialCard(official, 'bg-purple-600', 300 + idx * 50)}
-                              {idx < kaurStaff.length - 1 && <div className="w-1 h-4 bg-gray-400"></div>} {/* Garis vertikal antar Kaur */}
+                              {idx < kaurStaff.length - 1 && <div className="w-1 h-4 bg-gray-400"></div>}
                             </React.Fragment>
                           ))}
                         </div>
@@ -369,11 +367,11 @@ const Aparatur = () => {
 
                   {/* Cabang Kepala Dusun */}
                   {kepalaDusun.length > 0 && (
-                    <div className="flex flex-col items-center mx-4 min-w-[200px]" data-aos="fade-up" data-aos-delay="300">
+                    <div className="flex flex-col items-center mx-4 min-w-[200px]">
                       {kepalaDusun.map((official, idx) => (
                         <React.Fragment key={official.id}>
                           {renderChartOfficialCard(official, 'bg-orange-600', 350 + idx * 50)}
-                          {idx < kepalaDusun.length - 1 && <div className="w-1 h-4 bg-gray-400"></div>} {/* Garis vertikal antar Kadus */}
+                          {idx < kepalaDusun.length - 1 && <div className="w-1 h-4 bg-gray-400"></div>}
                         </React.Fragment>
                       ))}
                     </div>
@@ -388,13 +386,13 @@ const Aparatur = () => {
       {/* Contact Info (STILL STATIC) */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12" data-aos="fade-up">
+          <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Jam Pelayanan</h2>
             <p className="text-xl text-gray-600">Jadwal pelayanan kantor desa</p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 text-center" data-aos="fade-up">
+            <div className="bg-white rounded-xl shadow-lg p-6 text-center">
               <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MapPin className="w-8 h-8 text-white" />
               </div>
@@ -402,7 +400,7 @@ const Aparatur = () => {
               <p className="text-gray-600">Senin - Jumat<br />08:00 - 16:00 WIB</p>
             </div>
             
-            <div className="bg-white rounded-xl shadow-lg p-6 text-center" data-aos="fade-up" data-aos-delay="200">
+            <div className="bg-white rounded-xl shadow-lg p-6 text-center">
               <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MapPin className="w-8 h-8 text-white" />
               </div>
@@ -410,7 +408,7 @@ const Aparatur = () => {
               <p className="text-gray-600">Sabtu<br />08:00 - 12:00 WIB</p>
             </div>
             
-            <div className="bg-white rounded-xl shadow-lg p-6 text-center" data-aos="fade-up" data-aos-delay="400">
+            <div className="bg-white rounded-xl shadow-lg p-6 text-center">
               <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MapPin className="w-8 h-8 text-white" />
               </div>
@@ -424,4 +422,4 @@ const Aparatur = () => {
   );
 };
 
-export default Aparatur;
+export default PerangkatDesa;

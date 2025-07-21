@@ -42,7 +42,7 @@ const Navbar = () => {
       icon: Building,
       items: [
         { path: '/visi-misi', label: 'Visi & Misi', icon: TreePine },
-        { path: '/aparatur', label: 'Aparatur Desa', icon: Users },
+        { path: '/perangkat-desa', label: 'Perangkat Desa', icon: Users },
         { path: '/data-penduduk', label: 'Data Penduduk', icon: Users }, // DIPINDAHKAN DI SINI
       ],
     },

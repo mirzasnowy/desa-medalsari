@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapPin, Clock, Star, Phone, ExternalLink, ShoppingBag, Award, Users } from 'lucide-react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { Link } from 'react-router-dom'; // Import Link dari react-router-dom
 
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
@@ -21,6 +22,9 @@ export interface UMKMItem {
   contact: string; // e.g., "+62 812 3456 7890"
   established: string; // e.g., "2018"
   employees: string; // e.g., "5 orang"
+  latitude?: number; // Tambahkan properti untuk koordinat
+  longitude?: number;
+  address?: string; // Tambahkan properti untuk alamat
 }
 
 // Tambahkan deklarasi global untuk config Firebase jika belum ada di file ini atau main entry point
@@ -114,6 +118,10 @@ const UMKM = () => {
         ...doc.data() as Omit<UMKMItem, 'id'>,
         // Pastikan properti array seperti products selalu array
         products: (doc.data() as any).products || [],
+        // Pastikan properti baru geolocation juga dipetakan
+        latitude: (doc.data() as any).latitude,
+        longitude: (doc.data() as any).longitude,
+        address: (doc.data() as any).address || '',
       }));
       // Anda bisa menambahkan sorting jika perlu, misal berdasarkan rating atau nama
       const sortedData = data.sort((a, b) => b.rating - a.rating); // Sort by rating descending
@@ -138,16 +146,16 @@ const UMKM = () => {
   // Hitung tahun berpengalaman dari data UMKM yang ada
   const yearsOfExperience = umkmData.reduce((maxYear, umkm) => {
     const establishedYear = parseInt(umkm.established, 10);
-    if (!isNaN(establishedYear)) {
+    if (!isNaN(establishedYear) && establishedYear > 0) { // Pastikan tahun valid dan bukan 0
       return Math.max(maxYear, new Date().getFullYear() - establishedYear);
     }
     return maxYear;
-  }, 0); // Mulai dari 0 atau tahun awal yang relevan
+  }, 0); 
 
   const stats = [
-    { icon: ShoppingBag, label: 'Produk UMKM', value: `${totalProducts}+`, color: 'bg-amber-500' },
-    { icon: Users, label: 'Pelaku UMKM', value: `${totalUMKMPelaku}+`, color: 'bg-amber-500' },
-    { icon: Award, label: 'Tahun Berpengalaman', value: `${yearsOfExperience}+`, color: 'bg-amber-500' },
+    { icon: ShoppingBag, label: 'Produk UMKM', value: `${totalProducts > 0 ? totalProducts : '0'}+`, color: 'bg-amber-500' },
+    { icon: Users, label: 'Pelaku UMKM', value: `${totalUMKMPelaku > 0 ? totalUMKMPelaku : '0'}+`, color: 'bg-amber-500' },
+    { icon: Award, label: 'Tahun Berpengalaman', value: `${yearsOfExperience > 0 ? yearsOfExperience : '0'}+`, color: 'bg-amber-500' },
   ];
 
 
@@ -299,14 +307,22 @@ const UMKM = () => {
                       <Phone className="w-4 h-4" />
                       <span>Pesan</span>
                     </a>
-                    <button className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2">
+                    <Link 
+                      to={`/umkm/${umkm.id}`} // Link ke halaman detail UMKM
+                      className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
+                    >
                       <ExternalLink className="w-4 h-4" />
                       <span>Detail</span>
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
             ))}
+            {umkmData.length === 0 && (
+                <div className="text-center text-gray-600 text-lg col-span-full">
+                    Tidak ada UMKM yang ditemukan.
+                </div>
+            )}
           </div>
         </div>
       </section>
@@ -345,7 +361,7 @@ const UMKM = () => {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center" data-aos="fade-up" data-aos-delay="0">
+            <div className="text-center" data-aos="fade-up">
               <div className="bg-amber-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Award className="w-10 h-10 text-amber-600" />
               </div>
