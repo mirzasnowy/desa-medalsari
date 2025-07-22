@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Users, Building, TreePine, Camera, Star, MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom'; // Keep Link for external page navigation
+import { ArrowRight, Users, Building, TreePine, Camera, Star, MapPin, Award, BookOpen } from 'lucide-react'; // Import Award and BookOpen icons
+import { Link } from 'react-router-dom';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-
-import ChatbotFAQ from '../components/ChatbotFAQ'; // Pastikan path benar
-import bgImage from '../assets/bg3.jpg'; // Pastikan path relatifnya benar
-import pemdesLogo from '../assets/pemdes.png'; // Pastikan path relatifnya benar
-
+import WeatherWidget from '../components/WeatherWIdget';
+import ChatbotFAQ from '../components/ChatbotFAQ';
+import bgImage from '../assets/bg3.jpg';
+import pemdesLogo from '../assets/pemdes.png';
+import SocialProof from '../components/SocialProof';
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
 import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
@@ -17,11 +17,10 @@ import { getFirestore, doc, collection, onSnapshot, Firestore, query } from 'fir
 interface StatistikPendudukData {
     totalPenduduk: number;
     kepalaKeluarga: number;
-    // Tambahkan properti lain yang mungkin ingin Anda tampilkan
 }
 
 interface UMKMItem {
-    id?: string; 
+    id?: string;
 }
 
 interface WisataItem {
@@ -87,7 +86,7 @@ const Home = () => {
             setAuth(firebaseAuth);
 
             const unsubscribeAuth = firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
-                if (!user) { 
+                if (!user) {
                     try {
                         await signInAnonymously(firebaseAuth);
                     } catch (anonError: any) {
@@ -116,7 +115,7 @@ const Home = () => {
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const unsubscribes: (() => void)[] = [];
         let fetchedCount = 0;
-        const totalFetches = 3; 
+        const totalFetches = 3;
 
         const checkLoadingComplete = () => {
             fetchedCount++;
@@ -142,7 +141,7 @@ const Home = () => {
         }, (err) => {
             console.error(`Error fetching statistikPenduduk: ${err.message}`);
             setDataError(`Failed to load population data: ${err.message}`);
-            setTotalPenduduk(null); 
+            setTotalPenduduk(null);
             setKepalaKeluarga(null);
             checkLoadingComplete();
         }));
@@ -150,12 +149,12 @@ const Home = () => {
         // 2. Ambil Total UMKM (Koleksi)
         const umkmCollectionPath = `/artifacts/${appId}/umkm`;
         unsubscribes.push(onSnapshot(query(collection(db, umkmCollectionPath)), (snapshot) => {
-            setTotalUMKM(snapshot.size); 
+            setTotalUMKM(snapshot.size);
             checkLoadingComplete();
         }, (err) => {
             console.error(`Error fetching umkm: ${err.message}`);
             setDataError(`Failed to load UMKM count: ${err.message}`);
-            setTotalUMKM(null); 
+            setTotalUMKM(null);
             checkLoadingComplete();
         }));
 
@@ -167,7 +166,7 @@ const Home = () => {
         }, (err) => {
             console.error(`Error fetching wisata: ${err.message}`);
             setDataError(`Failed to load tourism count: ${err.message}`);
-            setTotalWisata(null); 
+            setTotalWisata(null);
             checkLoadingComplete();
         }));
 
@@ -206,8 +205,30 @@ const Home = () => {
     const quickAccess = [
         { title: 'Wisata Alam', icon: TreePine, path: '/wisata', color: 'from-green-500 to-emerald-600' },
         { title: 'UMKM Lokal', icon: Building, path: '/umkm', color: 'from-blue-500 to-cyan-600' },
-        { title: 'Kearifan Lokal', icon: Star, path: '/kearifan', color: 'from-purple-500 to-pink-600' }, 
+        { title: 'Kearifan Lokal', icon: Star, path: '/kearifan', color: 'from-purple-500 to-pink-600' },
         { title: 'Galeri Foto', icon: Camera, path: '/galeri', color: 'from-orange-500 to-red-600' },
+    ];
+
+    // Data Pencapaian dan Penghargaan Desa (contoh statis)
+    const achievements = [
+        {
+            year: 2023,
+            title: 'Desa Mandiri Terbaik Provinsi',
+            description: 'Penghargaan atas kemandirian desa dalam pengelolaan sumber daya dan pengembangan ekonomi lokal.',
+            icon: '🏆'
+        },
+        {
+            year: 2022,
+            title: 'Destinasi Wisata Unggulan Daerah',
+            description: 'Diakui sebagai salah satu destinasi wisata terbaik dengan peningkatan jumlah pengunjung yang signifikan.',
+            icon: '🏅'
+        },
+        {
+            year: 2021,
+            title: 'Desa Sadar Lingkungan',
+            description: 'Penghargaan untuk inisiatif dan program pelestarian lingkungan yang berkelanjutan.',
+            icon: '🌿'
+        },
     ];
 
     // Buat array stats dinamis berdasarkan data yang diambil
@@ -243,13 +264,13 @@ const Home = () => {
             {/* Hero Section */}
             <section className="relative h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100">
                 <div className="absolute inset-0 bg-black/20"></div>
-                    <div 
+                    <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                     style={{
                         backgroundImage: `url(${bgImage})`,
                     }}
                 ></div>
-                
+
                 <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4" data-aos="fade-up">
                     <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
                         Selamat Datang di<br />
@@ -262,7 +283,7 @@ const Home = () => {
                     </p>
                     <div className="space-x-4">
                         {/* Tombol "Jelajahi Keindahan Desa" -> Scroll ke Quick Access */}
-                        <a 
+                        <a
                             href="#jelajahi-desa" // Target ID dari section Quick Access
                             className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-full font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 inline-flex items-center space-x-2"
                         >
@@ -270,7 +291,7 @@ const Home = () => {
                             <ArrowRight className="w-5 h-5" />
                         </a>
                         {/* Tombol "Hubungi Kami" -> Navigasi ke /kontak */}
-                        <Link 
+                        <Link
                             to="/kontak"
                             className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full font-semibold hover:bg-white/30 transition-all duration-300 inline-flex items-center space-x-2"
                         >
@@ -294,7 +315,7 @@ const Home = () => {
                         {dynamicStats.map((stat, index) => {
                             const Icon = stat.icon;
                             return (
-                                <div 
+                                <div
                                     key={index}
                                     className="text-center group"
                                     data-aos="fade-up"
@@ -313,13 +334,13 @@ const Home = () => {
             </section>
 
             {/* Quick Access */}
-            <section id="jelajahi-desa" className="py-20 bg-gray-50"> {/* Tambahkan ID ini */}
+            <section id="jelajahi-desa" className="py-20 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12" data-aos="fade-up">
                         <h2 className="text-4xl font-bold text-gray-800 mb-4">Jelajahi Desa Medalsari</h2>
                         <p className="text-xl text-gray-600">Temukan keindahan dan potensi yang ada di desa kami</p>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-4 gap-8">
                         {quickAccess.map((item, index) => {
                             const Icon = item.icon;
@@ -349,6 +370,65 @@ const Home = () => {
                 </div>
             </section>
 
+            {/* Buku Profil Desa Section */}
+            <section className="py-20 bg-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12" data-aos="fade-up">
+                        <h2 className="text-4xl font-bold text-gray-800 mb-4">Buku Profil Desa Medalsari</h2>
+                        <p className="text-xl text-gray-600">
+                            Lihat lebih dekat data dan informasi lengkap mengenai Desa Medalsari dalam format digital.
+                        </p>
+                    </div>
+                    <div className="flex justify-center" data-aos="fade-up" data-aos-delay="200">
+                        <div className="w-full md:w-3/4 lg:w-2/3 h-[600px] bg-white rounded-lg shadow-xl overflow-hidden border border-gray-200">
+                            {/* Ganti URL_PDF_BUKU_PROFIL dengan URL PDF buku profil desa Anda */}
+                            <iframe
+                                src="https://drive.google.com/file/d/1mnNLl9VgWkSVeIbb-E-Z7DmVZUpmRUFR/preview" // GANTI DENGAN URL PDF ASLI ANDA
+                                width="100%"
+                                height="100%"
+                                className="border-0"
+                                title="Buku Profil Desa Medalsari"
+                            >
+                                Maaf, browser Anda tidak mendukung tampilan PDF. Silakan <a href="https://example.com/buku-profil-desa-medalsari.pdf" className="text-blue-600 hover:underline">unduh PDF</a> untuk melihatnya.
+                            </iframe>
+                        </div>
+                    </div>
+                    <div className="text-center mt-8" data-aos="fade-up" data-aos-delay="300">
+                        <a
+                            href="https://drive.google.com/file/d/1mnNLl9VgWkSVeIbb-E-Z7DmVZUpmRUFR/preview" // GANTI DENGAN URL PDF ASLI ANDA
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-emerald-500 text-white px-8 py-4 rounded-full font-semibold hover:bg-emerald-600 transition-all duration-300 inline-flex items-center space-x-2"
+                        >
+                            <BookOpen className="w-5 h-5" />
+                            <span>Unduh Buku Profil Desa</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            {/* Weather Widget Section */}
+            <section className="py-16 bg-gradient-to-br from-blue-50 to-indigo-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12" data-aos="fade-up">
+                        <h2 className="text-4xl font-bold text-gray-800 mb-4">Informasi Cuaca Real-Time</h2>
+                        <p className="text-xl text-gray-600">Pantau kondisi cuaca terkini di Desa Medalsari</p>
+                    </div>
+                    <div className="max-w-md mx-auto" data-aos="fade-up" data-aos-delay="200">
+                        <WeatherWidget />
+                    </div>
+                </div>
+            </section>
+
+            <ChatbotFAQ />
+                       {/* Social Proof Section */}
+            <section className="py-16 bg-white">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-4xl mx-auto" data-aos="fade-up">
+                  <SocialProof />
+                </div>
+              </div>
+            </section>
             {/* Testimonials (STILL STATIC) */}
             <section className="py-20 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -356,18 +436,18 @@ const Home = () => {
                         <h2 className="text-4xl font-bold text-gray-800 mb-4">Apa Kata Mereka</h2>
                         <p className="text-xl text-gray-600">Testimoni dari para pengunjung dan mitra desa</p>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-3 gap-8">
                         {testimonials.map((testimonial, index) => (
-                            <div 
+                            <div
                                 key={index}
                                 className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
                                 data-aos="fade-up"
                                 data-aos-delay={index * 100}
                             >
                                 <div className="flex items-center mb-4">
-                                    <img 
-                                        src={testimonial.image} 
+                                    <img
+                                        src={testimonial.image}
                                         alt={testimonial.name}
                                         className="w-12 h-12 rounded-full mr-4 object-cover"
                                     />
@@ -387,7 +467,6 @@ const Home = () => {
                     </div>
                 </div>
             </section>
-<ChatbotFAQ />
             {/* CTA Section */}
             <section className="py-20 bg-gradient-to-r from-emerald-500 to-teal-600">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -397,14 +476,14 @@ const Home = () => {
                             Mari bersama-sama membangun desa yang lebih maju dan sejahtera
                         </p>
                         <div className="space-x-4">
-                            <Link 
+                            <Link
                                 to="/kontak"
                                 className="bg-white text-emerald-600 px-8 py-4 rounded-full font-semibold hover:bg-gray-100 transition-all duration-300 inline-flex items-center space-x-2"
                             >
                                 <span>Hubungi Kami</span>
                                 <ArrowRight className="w-5 h-5" />
                             </Link>
-                            <Link 
+                            <Link
                                 to="/wisata"
                                 className="bg-emerald-700 text-white px-8 py-4 rounded-full font-semibold hover:bg-emerald-800 transition-all duration-300 inline-flex items-center space-x-2"
                             >
@@ -415,7 +494,7 @@ const Home = () => {
                     </div>
                 </div>
             </section>
-            
+
             {/* Chatbot FAQ Section */}
         </div>
     );

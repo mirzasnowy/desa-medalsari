@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
 import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
-import { getFirestore, collection, doc, onSnapshot, updateDoc, Firestore, query, where, orderBy } from 'firebase/firestore'; 
+import { getFirestore, collection, doc, onSnapshot, updateDoc, deleteDoc, Firestore, query, where, orderBy } from 'firebase/firestore'; // Import deleteDoc
 
-// Import all necessary Lucide icons, including X now
+// Import all necessary Lucide icons
 import {
   Users,
   FileText,
@@ -16,8 +16,10 @@ import {
   LucideIcon, 
   Mail, 
   CheckCircle,
-  X, // <--- PASTIKAN X DIIMPOR DI SINI
-  Phone, // <--- PASTIKAN Phone DIIMPOR DI SINI jika digunakan
+  X, 
+  Phone, 
+  LogOut, 
+  Trash2, // <--- PASTIKAN ICON TRASH2 DIIMPOR DI SINI
 } from 'lucide-react';
 
 // Import komponen yang telah dipisahkan
@@ -95,7 +97,7 @@ const AdminDashboard = () => {
           apiKey: "dummy-api-key", authDomain: "dummy.firebaseapp.com", projectId: "dummy-project",
           storageBucket: "dummy.appspot.com", messagingSenderId: "dummy", appId: "dummy"
         };
-        setError("Firebase config not found or empty. UI will load, but data operations might not work. Ensure '__firebase_config' is set correctly.");
+        setError("Konfigurasi Firebase tidak ditemukan atau kosong. UI akan dimuat, tetapi data operations might not work. Ensure '__firebase_config' is set correctly.");
       }
 
       let app: FirebaseApp;
@@ -116,8 +118,7 @@ const AdminDashboard = () => {
           setUserId(user.uid);
         } else {
           try {
-            const anonUser = await signInAnonymously(firebaseAuth);
-            setUserId(anonUser.user.uid);
+            await signInAnonymously(firebaseAuth);
           } catch (anonError: any) {
             console.error("Error signing in anonymously:", anonError);
             setError(`Authentication error: ${anonError.message}`);
@@ -207,8 +208,7 @@ const AdminDashboard = () => {
     // --- PESAN MASUK (SEMUA PESAN) ---
     const messagesCollectionPath = `/artifacts/${appId}/messages`;
     unsubscribes.push(onSnapshot(
-      // Mengambil SEMUA pesan, diurutkan berdasarkan isRead (false dulu) lalu timestamp
-      query(collection(db, messagesCollectionPath), orderBy('isRead', 'asc'), orderBy('timestamp', 'desc')), // <--- MODIFIKASI QUERY DI SINI
+      query(collection(db, messagesCollectionPath), orderBy('isRead', 'asc'), orderBy('timestamp', 'desc')), 
       (snapshot) => {
         const messages: ContactMessage[] = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -217,10 +217,10 @@ const AdminDashboard = () => {
           phone: doc.data().phone,
           subject: doc.data().subject,
           message: doc.data().message,
-          timestamp: doc.data().timestamp.toDate(), // Konversi Timestamp Firestore ke Date
+          timestamp: doc.data().timestamp.toDate(), 
           isRead: doc.data().isRead,
         }));
-        setAllMessages(messages); // <--- SIMPAN SEMUA PESAN DI allMessages
+        setAllMessages(messages); 
         checkLoadingComplete(); 
       },
       (err) => {
@@ -252,6 +252,21 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fungsi untuk menghapus pesan
+  const deleteMessage = async (messageId: string) => {
+    if (!db) return;
+    if (!window.confirm("Apakah Anda yakin ingin menghapus pesan ini?")) return; // Konfirmasi
+    try {
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      const messageDocRef = doc(db, `/artifacts/${appId}/messages`, messageId);
+      await deleteDoc(messageDocRef); // Menggunakan deleteDoc
+      console.log(`Message ${messageId} deleted.`);
+    } catch (err) {
+      console.error(`Error deleting message ${messageId}:`, err);
+      alert(`Gagal menghapus pesan: ${err.message}`);
+    }
+  };
+
   // Menu Items for Sidebar
   const menuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -271,8 +286,8 @@ const AdminDashboard = () => {
         return (
           <DashboardOverview 
             dashboardData={dashboardData} 
-            newMessagesCount={unreadMessagesCount} // Teruskan jumlah pesan belum dibaca
-            onShowMessages={() => setShowMessagesModal(true)} // Teruskan handler untuk membuka modal pesan
+            newMessagesCount={unreadMessagesCount} 
+            onShowMessages={() => setShowMessagesModal(true)} 
           />
         );
       case 'dataPenduduk':
@@ -353,7 +368,7 @@ const AdminDashboard = () => {
         <p className="text-sm mt-3">Pastikan Firebase dikonfigurasi dengan benar dan aturan keamanan Firestore mengizinkan akses.</p>
         {userId && (
           <p className="text-sm mt-2">
-            User ID Aktif: <code className="bg-gray-200 px-2 py-1 rounded text-gray-800 break-all">{userId}</code>
+            User ID Anda: <code className="bg-gray-200 px-2 py-1 rounded text-gray-800 break-all">{userId}</code>
           </p>
         )}
       </div>
@@ -380,8 +395,8 @@ const AdminDashboard = () => {
           setSidebarOpen={setSidebarOpen}
           sidebarOpen={sidebarOpen}
           setSearchQuery={setSearchQuery}
-          newMessagesCount={unreadMessagesCount} // Teruskan jumlah pesan belum dibaca ke Header
-          onShowMessages={() => setShowMessagesModal(true)} // Teruskan handler
+          newMessagesCount={unreadMessagesCount} 
+          onShowMessages={() => setShowMessagesModal(true)} 
         />
 
         {/* Content */}
@@ -402,7 +417,7 @@ const AdminDashboard = () => {
       {showMessagesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 font-sans">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg relative max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold mb-5 text-gray-800 border-b pb-3">Pesan Masuk ({unreadMessagesCount} Belum Dibaca)</h3> {/* Tampilkan jumlah belum dibaca */}
+            <h3 className="text-xl font-semibold mb-5 text-gray-800 border-b pb-3">Pesan Masuk ({unreadMessagesCount} Belum Dibaca)</h3> 
             <button
               onClick={() => setShowMessagesModal(false)}
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 rounded-full p-1 transition-colors"
@@ -411,14 +426,14 @@ const AdminDashboard = () => {
               <X className="w-5 h-5" />
             </button>
 
-            {allMessages.length === 0 ? ( // Gunakan allMessages di sini
+            {allMessages.length === 0 ? ( 
               <p className="text-gray-600 text-center py-8">Tidak ada pesan.</p>
             ) : (
               <div className="space-y-4">
-                {allMessages.map(message => ( // Iterasi melalui allMessages
+                {allMessages.map(message => ( 
                   <div 
                     key={message.id} 
-                    className={`border border-gray-200 rounded-lg p-4 ${message.isRead ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-gray-800'}`} // Gaya berbeda untuk pesan sudah dibaca
+                    className={`border border-gray-200 rounded-lg p-4 ${message.isRead ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-gray-800'}`} 
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex flex-col">
@@ -433,8 +448,8 @@ const AdminDashboard = () => {
                         <Phone className="w-3 h-3 mr-1" /> Telp: {message.phone}
                       </p>
                     )}
-                    {!message.isRead && ( // Hanya tampilkan tombol jika belum dibaca
-                      <div className="flex justify-end mt-3">
+                    <div className="flex justify-end mt-3 space-x-2"> {/* Added space-x-2 for spacing */}
+                      {!message.isRead && ( 
                         <button
                           onClick={() => markMessageAsRead(message.id)}
                           className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 rounded-md bg-blue-100 hover:bg-blue-200 transition-colors"
@@ -442,16 +457,22 @@ const AdminDashboard = () => {
                           <CheckCircle className="w-4 h-4" />
                           <span>Tandai Sudah Dibaca</span>
                         </button>
-                      </div>
-                    )}
-                    {message.isRead && ( // Tampilkan status "Sudah Dibaca" jika sudah dibaca
-                      <div className="flex justify-end mt-3">
-                        <span className="flex items-center space-x-1 text-green-600 text-sm font-medium">
+                      )}
+                      {message.isRead && ( 
+                        <span className="flex items-center space-x-1 text-green-600 text-sm font-medium px-3 py-1"> 
                           <CheckCircle className="w-4 h-4" />
                           <span>Sudah Dibaca</span>
                         </span>
-                      </div>
-                    )}
+                      )}
+                      {/* Tombol Hapus Pesan */}
+                      <button
+                        onClick={() => deleteMessage(message.id)} // Panggil fungsi deleteMessage
+                        className="flex items-center space-x-1 text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 rounded-md bg-red-100 hover:bg-red-200 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" /> {/* Icon Trash2 */}
+                        <span>Hapus</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
