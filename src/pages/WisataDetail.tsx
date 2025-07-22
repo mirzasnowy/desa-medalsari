@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet'; // Import Leaflet library untuk custom marker
+import L from 'leaflet';
 import {
   MapPin,
   Clock,
@@ -12,14 +12,13 @@ import {
   ArrowLeft,
   ExternalLink,
   MessageCircle,
-  Users // Tambahkan jika perlu, tidak ada di starter Anda
+  Users
 } from 'lucide-react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
-import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
 import { getFirestore, doc, getDoc, Firestore } from 'firebase/firestore';
 
 // Definisi tipe (harus sesuai dengan WisataItem di Wisata.tsx)
@@ -33,9 +32,9 @@ export interface WisataItem {
   hours: string;
   facilities: string[];
   contact: string;
-  latitude?: number; // Tambahkan properti untuk koordinat
+  latitude?: number;
   longitude?: number;
-  address?: string; // Tambahkan properti untuk alamat
+  address?: string;
 }
 
 // Custom marker icon (untuk React-Leaflet)
@@ -47,18 +46,18 @@ const customMarker = new L.Icon({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
   shadowSize: [41, 41],
 });
-// Penting: Atasi masalah ikon default Leaflet di Webpack/Vite
-L.Marker.prototype.options.icon = customMarker; // Gunakan customMarker di sini
 
-// Tambahkan deklarasi global untuk config Firebase jika belum ada di file ini atau main entry point
+// Atasi masalah ikon default Leaflet di Webpack/Vite
+L.Marker.prototype.options.icon = customMarker;
+
+// Deklarasi global untuk config Firebase
 declare global {
   var __firebase_config: string | undefined;
   var __app_id: string | undefined;
 }
 
-
 const WisataDetail = () => {
-  const { id } = useParams<{ id: string }>(); // Ambil ID dari URL
+  const { id } = useParams<{ id: string }>();
   const [wisata, setWisata] = useState<WisataItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,79 +69,64 @@ const WisataDetail = () => {
       once: true,
     });
 
-    let firebaseConfig: FirebaseOptions | null = null;
-    try {
-      if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
-        firebaseConfig = JSON.parse(__firebase_config);
-      } else {
-        setError("Firebase config not found. Data might not load.");
-        setLoading(false);
-        return;
-      }
-
-      let app: FirebaseApp;
-      if (!getApps().length) {
-        app = initializeApp(firebaseConfig);
-      } else {
-        app = getApps()[0];
-      }
-
-      const firestore: Firestore = getFirestore(app);
-      const firebaseAuth: Auth = getAuth(app);
-
-      // Pastikan otentikasi siap sebelum mencoba mengambil data
-      const unsubscribeAuth = firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
-        if (!user) {
-          try {
-            await signInAnonymously(firebaseAuth);
-          } catch (anonError: any) {
-            console.error("Error signing in anonymously:", anonError);
-            setError(`Authentication error: ${anonError.message}`);
-            setLoading(false);
-            return;
-          }
+    const fetchWisataData = async () => {
+      try {
+        // Validasi ID
+        if (!id) {
+          setError("ID wisata tidak tersedia.");
+          setLoading(false);
+          return;
         }
-        
-        // Setelah otentikasi siap, baru ambil data
-        if (id) {
-          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-          const docRef = doc(firestore, `/artifacts/${appId}/wisata`, id);
-          
-          getDoc(docRef)
-            .then(docSnap => {
-              if (docSnap.exists()) {
-                setWisata({ 
-                  id: docSnap.id, 
-                  ...docSnap.data() as Omit<WisataItem, 'id'>,
-                  facilities: (docSnap.data() as any).facilities || [],
-                  latitude: (docSnap.data() as any).latitude,
-                  longitude: (docSnap.data() as any).longitude,
-                  address: (docSnap.data() as any).address || '',
-                });
-              } else {
-                setError("Data Wisata tidak ditemukan.");
-              }
-            })
-            .catch(err => {
-              console.error("Error fetching Wisata detail:", err);
-              setError(`Gagal memuat data: ${err.message}`);
-            })
-            .finally(() => {
-              setLoading(false);
-            });
+
+        // Validasi Firebase config
+        let firebaseConfig: FirebaseOptions | null = null;
+        if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
+          firebaseConfig = JSON.parse(__firebase_config);
         } else {
-            setError("ID wisata tidak tersedia.");
-            setLoading(false);
+          setError("Firebase config not found. Data might not load.");
+          setLoading(false);
+          return;
         }
-      });
 
-      return () => unsubscribeAuth(); // Cleanup auth listener
-    } catch (e: any) {
-      console.error("Failed to initialize Firebase:", e);
-      setError(`Firebase initialization error: ${e.message}`);
-      setLoading(false);
-    }
-  }, [id]); // id sebagai dependency agar data di-fetch ulang jika ID berubah
+        // Initialize Firebase app
+        let app: FirebaseApp;
+        if (!getApps().length) {
+          app = initializeApp(firebaseConfig);
+        } else {
+          app = getApps()[0];
+        }
+
+        const firestore: Firestore = getFirestore(app);
+
+        // Ambil data dari Firestore tanpa autentikasi
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const docRef = doc(firestore, `/artifacts/${appId}/wisata`, id);
+        
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setWisata({ 
+            id: docSnap.id, 
+            ...data as Omit<WisataItem, 'id'>,
+            facilities: data.facilities || [],
+            latitude: data.latitude,
+            longitude: data.longitude,
+            address: data.address || '',
+          });
+        } else {
+          setError("Data Wisata tidak ditemukan.");
+        }
+      } catch (err: any) {
+        console.error("Error fetching Wisata detail:", err);
+        setError(`Gagal memuat data: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWisataData();
+  }, [id]);
 
   if (loading) {
     return (
@@ -158,7 +142,6 @@ const WisataDetail = () => {
       <div className="text-center p-6 text-red-700 bg-red-50 rounded-lg border border-red-200 mx-auto max-w-lg font-sans mt-20">
         <p className="font-semibold text-lg mb-2">Error!</p>
         <p className="text-base text-justify">{error || "Data Wisata tidak ditemukan."}</p>
-        {/* Tombol kembali yang diperbaiki */}
         <Link 
           to="/wisata" 
           className="mt-4 inline-flex items-center justify-center px-6 py-3 border border-emerald-600 text-emerald-600 font-semibold rounded-lg hover:bg-emerald-50 transition-colors shadow-sm"
@@ -193,7 +176,7 @@ const WisataDetail = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-20 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Tombol kembali yang diperbaiki */}
+        {/* Tombol kembali */}
         <Link 
           to="/wisata" 
           className="flex items-center text-gray-600 hover:text-emerald-600 transition-colors mb-8 
@@ -218,7 +201,7 @@ const WisataDetail = () => {
           {/* Details Section */}
           <div className="md:w-1/2 p-8 lg:p-12" data-aos="fade-left">
             <div className="flex items-center space-x-4 mb-4">
-              <span className="bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-medium">Wisata Alam</span> {/* Asumsi kategori, bisa diperbaiki jika ada di data */}
+              <span className="bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-medium">Wisata Alam</span>
               <div className="flex items-center space-x-1 text-gray-500">
                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                 <span className="text-lg font-bold text-gray-800">{rating}</span>

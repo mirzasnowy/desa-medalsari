@@ -6,10 +6,9 @@ import 'aos/dist/aos.css';
 
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
-import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, updateDoc, increment, Firestore } from 'firebase/firestore'; // Import updateDoc dan increment
+import { getFirestore, doc, getDoc, updateDoc, increment, Firestore } from 'firebase/firestore';
 
-// Definisi tipe untuk item Berita (harus sesuai dengan BeritaItem di Berita.tsx)
+// Definisi tipe untuk item Berita
 export interface BeritaItem {
   id?: string;
   title: string;
@@ -21,7 +20,7 @@ export interface BeritaItem {
   date: string;
   featured: boolean;
   status: 'Published' | 'Draft';
-  views?: number; // Views bisa opsional jika tidak selalu ada atau dihitung backend
+  views?: number;
 }
 
 // Tambahkan deklarasi global untuk config Firebase
@@ -30,18 +29,11 @@ declare global {
   var __app_id: string | undefined;
 }
 
-
 const BeritaDetail = () => {
-  const { id } = useParams<{ id: string }>(); // Ambil ID berita dari URL
+  const { id } = useParams<{ id: string }>();
   const [berita, setBerita] = useState<BeritaItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Firebase states (diperlukan di sini juga)
-  const [db, setDb] = useState<Firestore | null>(null);
-  const [auth, setAuth] = useState<Auth | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
-
 
   useEffect(() => {
     AOS.init({
@@ -50,96 +42,69 @@ const BeritaDetail = () => {
       once: true,
     });
 
-    let firebaseConfig: FirebaseOptions | null = null;
-    try {
-      if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
-        firebaseConfig = JSON.parse(__firebase_config);
-      } else {
-        setError("Firebase config not found. Data might not load.");
-        setLoading(false);
-        return;
-      }
+    const fetchBeritaDetail = async () => {
+      try {
+        let firebaseConfig: FirebaseOptions | null = null;
+        
+        // Cek apakah Firebase config tersedia
+        if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
+          firebaseConfig = JSON.parse(__firebase_config);
+        } else {
+          setError("Firebase config not found. Data might not load.");
+          setLoading(false);
+          return;
+        }
 
-      let app: FirebaseApp;
-      if (!getApps().length) {
-        app = initializeApp(firebaseConfig);
-      } else {
-        app = getApps()[0];
-      }
+        // Inisialisasi Firebase App
+        let app: FirebaseApp;
+        if (!getApps().length) {
+          app = initializeApp(firebaseConfig);
+        } else {
+          app = getApps()[0];
+        }
 
-      const firestore: Firestore = getFirestore(app);
-      const firebaseAuth: Auth = getAuth(app);
+        const firestore: Firestore = getFirestore(app);
 
-      setDb(firestore); // Set db state
-      setAuth(firebaseAuth); // Set auth state
+        if (id) {
+          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+          const docRef = doc(firestore, `/artifacts/${appId}/berita`, id);
+          
+          // Langsung ambil data tanpa autentikasi
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = { 
+              id: docSnap.id, 
+              ...docSnap.data() as Omit<BeritaItem, 'id'>,
+              views: (docSnap.data() as any).views || 0,
+            };
+            setBerita(data);
 
-      // Pastikan otentikasi siap sebelum mencoba mengambil data
-      const unsubscribeAuth = firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
-        if (!user) {
-          try {
-            await signInAnonymously(firebaseAuth);
-          } catch (anonError: any) {
-            console.error("Error signing in anonymously:", anonError);
-            setError(`Authentication error: ${anonError.message}`);
-            setLoading(false);
-            return;
+            // AUTO-INCREMENT VIEW COUNT (opsional - bisa dijalankan tanpa auth jika rules mengizinkan)
+            try {
+              await updateDoc(docRef, {
+                views: increment(1)
+              });
+              console.log(`View count incremented for ${id}`);
+            } catch (viewError) {
+              console.warn(`Could not increment view count for ${id}:`, viewError);
+              // Tidak menampilkan error ke user, hanya log warning
+            }
+
+          } else {
+            setError("Berita tidak ditemukan.");
           }
         }
-        setIsAuthReady(true); // Mark auth as ready
-      });
-
-      return () => unsubscribeAuth(); // Cleanup auth listener
-    } catch (e: any) {
-      console.error("Failed to initialize Firebase:", e);
-      setError(`Firebase initialization error: ${e.message}`);
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!db || !isAuthReady || !id) { // Pastikan db, auth siap, dan ada ID
-      return;
-    }
-
-    setLoading(true);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const docRef = doc(db, `/artifacts/${appId}/berita`, id); 
-
-    getDoc(docRef)
-      .then(docSnap => {
-        if (docSnap.exists()) {
-          const data = { 
-            id: docSnap.id, 
-            ...docSnap.data() as Omit<BeritaItem, 'id'>,
-            views: (docSnap.data() as any).views || 0, // Fallback views to 0
-          };
-          setBerita(data);
-
-          // --- AUTO-INCREMENT VIEW COUNT ---
-          // Tingkatkan jumlah dilihat di Firestore
-          updateDoc(docRef, {
-            views: increment(1)
-          }).then(() => {
-            console.log(`View count incremented for ${id}`);
-          }).catch(err => {
-            console.error(`Error incrementing view count for ${id}:`, err);
-            // Anda bisa set error di sini atau biarkan saja
-          });
-          // --- END AUTO-INCREMENT ---
-
-        } else {
-          setError("Berita tidak ditemukan.");
-        }
-      })
-      .catch(err => {
+      } catch (err: any) {
         console.error("Error fetching berita detail:", err);
         setError(`Gagal memuat berita: ${err.message}`);
-      })
-      .finally(() => {
+      } finally {
         setLoading(false);
-      });
+      }
+    };
 
-  }, [id, db, isAuthReady]); // Tambahkan db dan isAuthReady sebagai dependensi
+    fetchBeritaDetail();
+  }, [id]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -242,7 +207,7 @@ const BeritaDetail = () => {
               </div>
               <div className="flex items-center space-x-1">
                 <Eye className="w-4 h-4" />
-                <span>{views || 0}x dilihat</span> {/* Menampilkan jumlah views */}
+                <span>{views || 0}x dilihat</span>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(category)}`}>
                 <Tag className="inline w-3 h-3 mr-1"/> {category}
@@ -259,8 +224,6 @@ const BeritaDetail = () => {
             </p>
 
             <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed">
-              {/* Ini adalah tempat konten lengkap berita ditampilkan */}
-              {/* Menggunakan dangerouslySetInnerHTML jika content adalah HTML/rich text */}
               <p dangerouslySetInnerHTML={{ __html: content }}></p>
             </div>
           </div>

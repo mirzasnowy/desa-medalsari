@@ -206,7 +206,7 @@ const Home = () => {
     const quickAccess = [
         { title: 'Wisata Alam', icon: TreePine, path: '/wisata', color: 'from-green-500 to-emerald-600' },
         { title: 'UMKM Lokal', icon: Building, path: '/umkm', color: 'from-blue-500 to-cyan-600' },
-        { title: 'Kearifan Lokal', icon: Star, path: '/kearifanLokal', color: 'from-purple-500 to-pink-600' }, 
+        { title: 'Kearifan Lokal', icon: Star, path: '/kearifan', color: 'from-purple-500 to-pink-600' }, 
         { title: 'Galeri Foto', icon: Camera, path: '/galeri', color: 'from-orange-500 to-red-600' },
     ];
 

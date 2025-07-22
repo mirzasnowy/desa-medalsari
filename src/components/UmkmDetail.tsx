@@ -8,7 +8,7 @@ import {
   Clock,
   Star,
   Phone,
-  ArrowLeft, // Digunakan untuk tombol kembali
+  ArrowLeft,
   ShoppingBag,
   Award,
   Users,
@@ -19,8 +19,7 @@ import 'aos/dist/aos.css';
 
 // Firebase Imports
 import { initializeApp, FirebaseApp, getApps, FirebaseOptions } from 'firebase/app';
-import { getAuth, signInAnonymously, Auth, User as FirebaseAuthUser } from 'firebase/auth';
-import { getFirestore, collection, onSnapshot, doc, getDoc, Firestore, query } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, Firestore } from 'firebase/firestore';
 
 // Definisi tipe
 export interface UMKMItem {
@@ -63,71 +62,58 @@ const UMKMDetail = () => {
       once: true,
     });
 
-    let firebaseConfig: FirebaseOptions | null = null;
-    try {
-      if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
-        firebaseConfig = JSON.parse(__firebase_config);
-      } else {
-        setError("Firebase config not found. Data might not load.");
-        setLoading(false);
-        return;
-      }
-
-      let app: FirebaseApp;
-      if (!getApps().length) {
-        app = initializeApp(firebaseConfig);
-      } else {
-        app = getApps()[0];
-      }
-
-      const firestore: Firestore = getFirestore(app);
-      const firebaseAuth: Auth = getAuth(app);
-
-      firebaseAuth.onAuthStateChanged(async (user: FirebaseAuthUser | null) => {
-        if (!user) {
-          try {
-            await signInAnonymously(firebaseAuth);
-          } catch (anonError: any) {
-            console.error("Error signing in anonymously:", anonError);
-            setError(`Authentication error: ${anonError.message}`);
-            setLoading(false);
-            return;
-          }
-        }
+    const fetchUMKMDetail = async () => {
+      try {
+        let firebaseConfig: FirebaseOptions | null = null;
         
+        // Cek apakah Firebase config tersedia
+        if (typeof __firebase_config !== 'undefined' && __firebase_config.trim() !== '') {
+          firebaseConfig = JSON.parse(__firebase_config);
+        } else {
+          setError("Firebase config not found. Data might not load.");
+          setLoading(false);
+          return;
+        }
+
+        // Inisialisasi Firebase App
+        let app: FirebaseApp;
+        if (!getApps().length) {
+          app = initializeApp(firebaseConfig);
+        } else {
+          app = getApps()[0];
+        }
+
+        const firestore: Firestore = getFirestore(app);
+
         if (id) {
           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
           const docRef = doc(firestore, `/artifacts/${appId}/umkm`, id);
           
-          getDoc(docRef)
-            .then(docSnap => {
-              if (docSnap.exists()) {
-                setUmkm({ 
-                  id: docSnap.id, 
-                  ...docSnap.data() as Omit<UMKMItem, 'id'>,
-                  products: (docSnap.data() as any).products || [], // Pastikan array
-                  latitude: (docSnap.data() as any).latitude, // Ambil data geolokasi
-                  longitude: (docSnap.data() as any).longitude,
-                  address: (docSnap.data() as any).address || '',
-                });
-              } else {
-                setError("Data UMKM tidak ditemukan.");
-              }
-            })
-            .catch(err => {
-              console.error("Error fetching UMKM detail:", err);
-              setError(`Gagal memuat data: ${err.message}`);
-            })
-            .finally(() => {
-              setLoading(false);
+          // Langsung ambil data tanpa autentikasi
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            setUmkm({ 
+              id: docSnap.id, 
+              ...docSnap.data() as Omit<UMKMItem, 'id'>,
+              products: (docSnap.data() as any).products || [],
+              latitude: (docSnap.data() as any).latitude,
+              longitude: (docSnap.data() as any).longitude,
+              address: (docSnap.data() as any).address || '',
             });
+          } else {
+            setError("Data UMKM tidak ditemukan.");
+          }
         }
-      });
-    } catch (e: any) {
-      console.error("Failed to initialize Firebase:", e);
-      setError(`Firebase initialization error: ${e.message}`);
-      setLoading(false);
-    }
+      } catch (err: any) {
+        console.error("Error fetching UMKM detail:", err);
+        setError(`Gagal memuat data: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUMKMDetail();
   }, [id]);
 
   if (loading) {
@@ -144,7 +130,6 @@ const UMKMDetail = () => {
       <div className="text-center p-6 text-red-700 bg-red-50 rounded-lg border border-red-200 mx-auto max-w-lg font-sans mt-20">
         <p className="font-semibold text-lg mb-2">Error!</p>
         <p className="text-base text-justify">{error || "Data UMKM tidak ditemukan."}</p>
-        {/* Tombol kembali yang diperbaiki */}
         <Link 
           to="/umkm" 
           className="mt-4 inline-flex items-center justify-center px-6 py-3 border border-amber-600 text-amber-600 font-semibold rounded-lg hover:bg-amber-50 transition-colors shadow-sm"
@@ -172,7 +157,7 @@ const UMKMDetail = () => {
   } = umkm;
 
   const position: [number, number] =
-    latitude && longitude ? [latitude, longitude] : [-6.524828, 107.174051]; // Default ke koordinat desa jika tidak ada
+    latitude && longitude ? [latitude, longitude] : [-6.524828, 107.174051];
 
   const phoneNumber = contact?.replace(/\D/g, '') || '';
   const whatsappUrl = `https://wa.me/${phoneNumber}`;
@@ -180,7 +165,7 @@ const UMKMDetail = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-20 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Tombol kembali yang diperbaiki */}
+        {/* Tombol kembali */}
         <Link 
           to="/umkm" 
           className="flex items-center text-gray-600 hover:text-amber-600 transition-colors mb-8 
