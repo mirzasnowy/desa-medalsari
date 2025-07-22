@@ -30,7 +30,7 @@ const WeatherWidget: React.FC = () => {
         setLoading(true);
         setError(null);
         const response = await fetch(
-          `http://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${LOCATION}&aqi=no`
+          `https://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${LOCATION}&aqi=no`
         );
 
         if (!response.ok) {
